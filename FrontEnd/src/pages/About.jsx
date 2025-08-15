@@ -21,7 +21,7 @@ const About = () => {
       <div className="space-y-8">
         <div className="text-center">
           <img 
-            src="https://nocode.meituan.com/photo/search?keyword=developer,portrait&width=200&height=200" 
+            src="/pic/zg.jpg" 
             alt="个人头像" 
             className="mx-auto object-cover w-32 h-32 rounded-full mb-4"
           />
