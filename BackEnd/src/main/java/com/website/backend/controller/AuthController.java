@@ -90,7 +90,7 @@ public class AuthController {
 			}
 
 			// 生成JWT令牌
-Authentication authentication = new UsernamePasswordAuthenticationToken(username, null, userDetails.getAuthorities());
+Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 String jwt = jwtTokenProvider.generateToken(authentication);
 
 
@@ -183,33 +183,34 @@ String jwt = jwtTokenProvider.generateToken(authentication);
 	 * 验证验证码并注册
 	 */
 	@PostMapping("/register/verify")
-	public ResponseEntity<?> register(@RequestBody Map<String, String> request) {
-		String username = request.get("username");
-		String password = request.get("password");
-		String verificationCode = request.get("verificationCode");
+public ResponseEntity<?> register(@RequestBody Map<String, String> request) {
+	String username = request.get("username");
+	String password = request.get("password");
+	String verificationCode = request.get("verificationCode");
+	Boolean isAdmin = Boolean.valueOf(request.getOrDefault("isAdmin", "false"));
 
-		if (username == null || username.isEmpty() || password == null || password.isEmpty() || verificationCode == null || verificationCode.isEmpty()) {
-			return ResponseEntity.badRequest().body("用户名、密码和验证码不能为空");
-		}
-
-		// 检查验证码是否有效
-		String redisKey = "verification_code:" + username;
-		String storedCode = (String) redisTemplate.opsForValue().get(redisKey);
-
-		if (storedCode == null || !storedCode.equals(verificationCode)) {
-			return ResponseEntity.badRequest().body("验证码无效或已过期");
-		}
-
-		// 注册用户
-		try {
-			User user = userService.registerUser(username, password);
-			// 注册成功后删除验证码
-			redisTemplate.delete(redisKey);
-			return ResponseEntity.ok("注册成功");
-		} catch (RuntimeException e) {
-			return ResponseEntity.badRequest().body(e.getMessage());
-		}
+	if (username == null || username.isEmpty() || password == null || password.isEmpty() || verificationCode == null || verificationCode.isEmpty()) {
+		return ResponseEntity.badRequest().body("用户名、密码和验证码不能为空");
 	}
+
+	// 检查验证码是否有效
+	String redisKey = "verification_code:" + username;
+	String storedCode = (String) redisTemplate.opsForValue().get(redisKey);
+
+	if (storedCode == null || !storedCode.equals(verificationCode)) {
+		return ResponseEntity.badRequest().body("验证码无效或已过期");
+	}
+
+	// 注册用户
+	try {
+		User user = userService.registerUser(username, password, isAdmin);
+		// 注册成功后删除验证码
+		redisTemplate.delete(redisKey);
+		return ResponseEntity.ok("注册成功");
+	} catch (RuntimeException e) {
+		return ResponseEntity.badRequest().body(e.getMessage());
+	}
+}
 
 	/**
 	 * 生成6位数字验证码

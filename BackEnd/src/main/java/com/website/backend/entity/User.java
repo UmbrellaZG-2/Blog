@@ -9,6 +9,7 @@ import lombok.Data;
  * 用户实体类，对应系统用户表
  */
 @Entity
+@Table(name = "users")
 @Data
 public class User {
 

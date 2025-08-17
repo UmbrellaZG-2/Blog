@@ -6,12 +6,14 @@ import jakarta.persistence.GeneratedValue;
 import java.time.LocalDateTime;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Table;
 import lombok.Data;
 
 /**
  * 评论实体类，对应文章评论表
  */
 @Entity
+@Table(name = "comments")
 @Data
 public class Comment {
 

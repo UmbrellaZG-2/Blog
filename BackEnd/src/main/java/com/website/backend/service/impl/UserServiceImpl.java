@@ -36,34 +36,54 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public User registerUser(String username, String password) {
-		log.info("开始注册用户: {}", username);
-		// 检查用户名是否已存在
-		if (userRepository.existsByUsername(username)) {
-			log.error("用户名已存在: {}", username);
-			throw new RuntimeException("用户名已存在: " + username);
-		}
+public User registerUser(String username, String password) {
+	return registerUser(username, password, false);
+}
 
-		// 创建新用户
-		User user = new User();
-		user.setUsername(username);
-		user.setPassword(passwordEncoder.encode(password));
-		log.info("用户信息创建完成: {}", username);
+/**
+ * 注册用户，可以指定是否为管理员
+ * @param username 用户名
+ * @param password 密码
+ * @param isAdmin 是否为管理员
+ * @return 注册后的用户
+ */
+public User registerUser(String username, String password, boolean isAdmin) {
+	log.info("开始注册用户: {}", username);
+	// 检查用户名是否已存在
+	if (userRepository.existsByUsername(username)) {
+		log.error("用户名已存在: {}", username);
+		throw new RuntimeException("用户名已存在: " + username);
+	}
 
-		// 设置用户角色为访客
-		Set<Role> roles = new HashSet<>();
+	// 创建新用户
+	User user = new User();
+	user.setUsername(username);
+	user.setPassword(passwordEncoder.encode(password));
+	log.info("用户信息创建完成: {}", username);
+
+	// 设置用户角色
+	Set<Role> roles = new HashSet<>();
+	if (isAdmin) {
+		Role adminRole = roleRepository.findByName(Role.RoleName.ROLE_ADMIN).orElseThrow(() -> {
+			log.error("角色不存在: ROLE_ADMIN");
+			return new RuntimeException("角色不存在: ROLE_ADMIN");
+		});
+		roles.add(adminRole);
+		log.info("用户 {} 被设置为管理员角色", username);
+	} else {
 		Role visitorRole = roleRepository.findByName(Role.RoleName.ROLE_VISITOR).orElseThrow(() -> {
 			log.error("角色不存在: ROLE_VISITOR");
 			return new RuntimeException("角色不存在: ROLE_VISITOR");
 		});
 		roles.add(visitorRole);
-		user.setRoles(roles);
-		log.info("用户角色设置完成: {}, 角色: {}", username, roles);
-
-		User savedUser = userRepository.save(user);
-		log.info("用户注册成功: {}", savedUser.getUsername());
-		return savedUser;
 	}
+	user.setRoles(roles);
+	log.info("用户角色设置完成: {}, 角色: {}", username, roles);
+
+	User savedUser = userRepository.save(user);
+	log.info("用户注册成功: {}", savedUser.getUsername());
+	return savedUser;
+}
 
 	@Override
 	public Optional<User> findByUsername(String username) {

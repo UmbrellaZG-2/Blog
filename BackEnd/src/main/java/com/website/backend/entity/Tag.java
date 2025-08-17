@@ -6,12 +6,14 @@ import jakarta.persistence.GeneratedValue;
 import java.time.LocalDateTime;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Table;
 import lombok.Data;
 
 /**
  * 标签实体类，对应文章标签表
  */
 @Entity
+@Table(name = "tags")
 @Data
 public class Tag {
 
