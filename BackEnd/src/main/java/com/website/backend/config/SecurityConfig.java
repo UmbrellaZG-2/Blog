@@ -1,5 +1,10 @@
 package com.website.backend.config;
 
+import java.io.IOException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,13 +19,22 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.ContentCachingRequestWrapper;
+import java.util.Enumeration;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.website.backend.security.JwtAuthenticationFilter;
 import com.website.backend.security.JwtTokenProvider;
 import com.website.backend.service.impl.RedisUserDetailsService;
+import lombok.extern.slf4j.Slf4j;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@Slf4j
 public class SecurityConfig {
 
 	private final RedisUserDetailsService redisUserDetailsService;
@@ -52,26 +66,40 @@ public class SecurityConfig {
 		return authConfig.getAuthenticationManager();
 	}
 
-	@Bean
-	public JwtTokenProvider jwtTokenProvider() {
-		return new JwtTokenProvider();
-	}
+	@Autowired
+	private JwtTokenProvider jwtTokenProvider;
 
 	@Bean
 	public JwtAuthenticationFilter jwtAuthenticationFilter() {
-		return new JwtAuthenticationFilter(jwtTokenProvider(), userDetailsService());
+		return new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService());
+	}
+
+	@Bean
+	public CorsConfigurationSource corsConfigurationSource() {
+		CorsConfiguration configuration = new CorsConfiguration();
+		configuration.addAllowedOriginPattern("*"); // 允许所有来源
+		configuration.addAllowedMethod("*");
+		configuration.addAllowedHeader("*");
+		configuration.setAllowCredentials(true);
+		configuration.setMaxAge(3600L);
+
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", configuration);
+		return source;
 	}
 
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-		http.csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+		http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+			.csrf(csrf -> csrf.disable())
 			.authorizeHttpRequests(auth -> auth
 				// 允许所有用户访问的API
-				.requestMatchers("/", "/aboutMe", "/aboutMe.html", "/api/aboutme", "/api/articles/**", "/api/guestbook/**", "/api/")
-				.permitAll()
 				// 认证相关API
-				.requestMatchers("/api/auth/**")
-				.permitAll()
+.requestMatchers("/auth", "/auth/**", "/login")
+.permitAll()
+// 允许所有用户访问的API
+.requestMatchers("/", "/aboutMe", "/aboutMe.html", "/aboutme", "/articles/**", "/guestbook/**")
+.permitAll()
 				// 管理员操作API需要ADMIN角色
 				.requestMatchers("/api/admin/**")
 				.hasRole("ADMIN")
@@ -81,9 +109,60 @@ public class SecurityConfig {
 			.sessionManagement(session -> session
 				.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
 			.authenticationProvider(authenticationProvider())
+			.addFilterBefore(requestLoggingFilter(), UsernamePasswordAuthenticationFilter.class)
 			.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
+	}
+
+	/**
+	 * 请求日志过滤器，用于记录请求详细信息
+	 */
+	@Bean
+	public OncePerRequestFilter requestLoggingFilter() {
+		return new OncePerRequestFilter() {
+			@Override
+			protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+					throws ServletException, IOException {
+				// 包装请求以缓存请求体
+				ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
+				
+				log.info("接收到请求: {} {}", wrappedRequest.getMethod(), wrappedRequest.getRequestURI());
+				
+				// 记录请求头
+				Enumeration<String> headerNames = wrappedRequest.getHeaderNames();
+				StringBuilder headers = new StringBuilder();
+				while (headerNames.hasMoreElements()) {
+					String headerName = headerNames.nextElement();
+					headers.append(headerName).append(": ").append(wrappedRequest.getHeader(headerName)).append(", ");
+				}
+				if (headers.length() > 0) {
+					headers.setLength(headers.length() - 2); // 移除最后一个逗号和空格
+				}
+				log.info("请求头: {}", headers.toString());
+				
+				// 记录请求参数（URL参数）
+				log.info("请求参数: {}", wrappedRequest.getParameterMap());
+				
+				// 记录请求体（如果是POST请求且内容类型是JSON）
+				if ("POST".equals(wrappedRequest.getMethod()) &&
+						wrappedRequest.getContentType() != null &&
+						wrappedRequest.getContentType().contains("application/json")) {
+					byte[] requestBody = wrappedRequest.getContentAsByteArray();
+					if (requestBody.length > 0) {
+						String body = new String(requestBody, wrappedRequest.getCharacterEncoding());
+						log.info("请求体: {}", body);
+					}
+				}
+				
+				log.info("请求IP: {}", wrappedRequest.getRemoteAddr());
+
+				// 继续过滤链
+				filterChain.doFilter(wrappedRequest, response);
+
+				log.info("请求处理完成: {} {}，状态码: {}", wrappedRequest.getMethod(), wrappedRequest.getRequestURI(), response.getStatus());
+			}
+		};
 	}
 
 }

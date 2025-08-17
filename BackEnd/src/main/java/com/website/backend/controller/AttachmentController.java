@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 @RestController
-@RequestMapping("/api/attachments")
+@RequestMapping("/attachments")
 public class AttachmentController {
 
 	private static final Logger logger = LoggerFactory.getLogger(AttachmentController.class);

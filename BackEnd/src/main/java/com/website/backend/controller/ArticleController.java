@@ -32,7 +32,7 @@ import org.springframework.data.domain.Page;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/articles")
+@RequestMapping("/articles")
 public class ArticleController {
 
 	private static final Logger logger = LoggerFactory.getLogger(ArticleController.class);
