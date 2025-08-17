@@ -13,14 +13,11 @@ import java.time.LocalDateTime;
 @Data
 public class Article {
 
-	/** 主键ID */
+	/** 主键ID，同时作为业务标识 */
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-
-	/** 文章编号，用于业务标识，唯一 */
 	@Column(nullable = false, unique = true)
-	private Long articleId;
+	private Long id;
 
 	/** 文章标题 */
 	@Column(length = 100)
@@ -35,10 +32,10 @@ public class Article {
 	private String category;
 
 	/** 是否有附件 */
-	private boolean addAttach = false;
+	private boolean hasAttachment = false;
 
 	/** 是否有封面图片 */
-	private boolean addPicture = false;
+	private boolean hasCoverImage = false;
 
 	/** 创建时间 */
 	private LocalDateTime createTime;

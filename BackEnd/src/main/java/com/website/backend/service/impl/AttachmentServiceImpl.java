@@ -42,8 +42,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 		int currentAttachCount = getCurrentAttachmentCount(article);
 
 		if (currentAttachCount >= maxAttachCount) {
-			log.warn("文章附件数量超过限制，文章ID: {}, 当前数量: {}, 限制数量: {}", article.getArticleId(), currentAttachCount,
-					maxAttachCount);
+			log.warn("文章附件数量超过限制，文章ID: {}, 当前数量: {}, 限制数量: {}", article.getId(), currentAttachCount, maxAttachCount);
 			throw new IOException("附件数量超过限制，最多可上传" + maxAttachCount + "个附件");
 		}
 
@@ -59,7 +58,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 			throw new IOException("只支持7Z、ZIP和RAR格式的压缩文件");
 		}
 
-		log.info("开始上传附件,文件名: {}, 文章ID: {}", fileName, article.getArticleId());
+		log.info("开始上传附件,文件名: {}, 文章ID: {}", fileName, article.getId());
 		String fileType = file.getContentType();
 		Long fileSize = file.getSize();
 
@@ -173,7 +172,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 
 	@Override
 	public void deleteAttachmentsByArticle(Article article) {
-		log.info("开始删除文章相关的所有附件,文章ID: {}", article.getArticleId());
+		log.info("开始删除文章相关的所有附件,文章ID: {}", article.getId());
 		// 获取文章相关的所有附件
 		java.util.List<Attachment> attachments = attachmentRepository.findByArticle(article);
 		log.info("找到{}个与文章相关的附件", attachments.size());
@@ -201,7 +200,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 			log.info("从数据库删除附件记录成功,附件ID: {}", attachment.getAttachmentId());
 		}
 
-		log.info("从数据库删除文章相关的所有附件记录成功,文章ID: {}", article.getArticleId());
+		log.info("从数据库删除文章相关的所有附件记录成功,文章ID: {}", article.getId());
 	}
 
 }

@@ -109,20 +109,19 @@ public class ArticleServiceImpl implements ArticleService {
 		article.setTitle(title);
 		article.setCategory(category);
 		article.setContent(content);
-		article.setArticleId(generateArticleId());
 		article.setCreateTime(LocalDateTime.now());
-		article.setUpdateTime(LocalDateTime.now());
+        article.setUpdateTime(LocalDateTime.now());
 
 		// 保存文章
 		Article savedArticle = articleRepository.save(article);
-		log.info("文章保存成功，ID: {}", savedArticle.getArticleId());
+		log.info("文章保存成功，ID: {}", savedArticle.getId());
 
 		// 处理附件
 		if (attachment != null && !attachment.isEmpty()) {
 			try {
-				log.info("开始上传文章附件，文章ID: {}", savedArticle.getArticleId());
+				log.info("开始上传文章附件，文章ID: {}", savedArticle.getId());
 				attachmentService.uploadAttachment(attachment, savedArticle);
-				savedArticle.setAddAttach(true);
+				savedArticle.setHasAttachment(true);
 				savedArticle = articleRepository.save(savedArticle);
 				log.info("文章附件上传成功");
 			}
@@ -135,9 +134,9 @@ public class ArticleServiceImpl implements ArticleService {
 		// 处理封面图片
 		if (picture != null && !picture.isEmpty()) {
 			try {
-				log.info("开始上传文章封面图片，文章ID: {}", savedArticle.getArticleId());
+				log.info("开始上传文章封面图片，文章ID: {}", savedArticle.getId());
 				articlePictureService.uploadPicture(picture, savedArticle);
-				savedArticle.setAddPicture(true);
+				savedArticle.setHasCoverImage(true);
 				savedArticle = articleRepository.save(savedArticle);
 				log.info("文章封面图片上传成功");
 			}
@@ -185,29 +184,29 @@ public class ArticleServiceImpl implements ArticleService {
 		article.setUpdateTime(LocalDateTime.now());
 
 		// 删除附件
-		if (deleteAttachment && article.isAddAttach()) {
-			log.info("删除文章附件，文章ID: {}", article.getArticleId());
+		if (deleteAttachment && article.isHasAttachment()) {
+			log.info("删除文章附件，文章ID: {}", article.getId());
 			attachmentService.deleteAttachmentsByArticle(article);
-			article.setAddAttach(false);
+			article.setHasAttachment(false);
 		}
 
 		// 删除封面图片
-		if (deletePicture && article.isAddPicture()) {
-			log.info("删除文章封面图片，文章ID: {}", article.getArticleId());
+		if (deletePicture && article.isHasCoverImage()) {
+			log.info("删除文章封面图片，文章ID: {}", article.getId());
 			articlePictureService.deletePictureByArticle(article);
-			article.setAddPicture(false);
+			article.setHasCoverImage(false);
 		}
 
 		// 上传新附件
 		if (attachment != null && !attachment.isEmpty()) {
 			try {
-				log.info("上传新附件，文章ID: {}", article.getArticleId());
+				log.info("上传新附件，文章ID: {}", article.getId());
 				// 如果有旧附件，先删除
-				if (article.isAddAttach()) {
+				if (article.isHasAttachment()) {
 					attachmentService.deleteAttachmentsByArticle(article);
 				}
 				attachmentService.uploadAttachment(attachment, article);
-				article.setAddAttach(true);
+				article.setHasAttachment(true);
 			}
 			catch (IOException e) {
 				log.error("附件上传失败: {}", e.getMessage());
@@ -218,13 +217,13 @@ public class ArticleServiceImpl implements ArticleService {
 		// 上传新封面图片
 		if (picture != null && !picture.isEmpty()) {
 			try {
-				log.info("上传新封面图片，文章ID: {}", article.getArticleId());
+				log.info("上传新封面图片，文章ID: {}", article.getId());
 				// 如果有旧图片，先删除
-				if (article.isAddPicture()) {
+				if (article.isHasCoverImage()) {
 					articlePictureService.deletePictureByArticle(article);
 				}
 				articlePictureService.uploadPicture(picture, article);
-				article.setAddPicture(true);
+				article.setHasCoverImage(true);
 			}
 			catch (IOException e) {
 				log.error("封面图片上传失败: {}", e.getMessage());
@@ -234,7 +233,7 @@ public class ArticleServiceImpl implements ArticleService {
 
 		// 保存更新后的文章
 		Article updatedArticle = articleRepository.save(article);
-		log.info("文章更新成功，ID: {}", updatedArticle.getArticleId());
+		log.info("文章更新成功，ID: {}", updatedArticle.getId());
 		return updatedArticle;
 	}
 
@@ -251,14 +250,14 @@ public class ArticleServiceImpl implements ArticleService {
 		Article article = getArticleById(id);
 
 		// 删除相关附件
-		if (article.isAddAttach()) {
-			log.info("删除文章附件，文章ID: {}", article.getArticleId());
+		if (article.isHasAttachment()) {
+			log.info("删除文章附件，文章ID: {}", article.getId());
 			attachmentService.deleteAttachmentsByArticle(article);
 		}
 
 		// 删除相关封面图片
-		if (article.isAddPicture()) {
-			log.info("删除文章封面图片，文章ID: {}", article.getArticleId());
+		if (article.isHasCoverImage()) {
+			log.info("删除文章封面图片，文章ID: {}", article.getId());
 			articlePictureService.deletePictureByArticle(article);
 		}
 

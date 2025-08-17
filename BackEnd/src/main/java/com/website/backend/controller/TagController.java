@@ -25,7 +25,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Page;
 
 @RestController
-@RequestMapping("/tags")
+@RequestMapping("/api/tags")
 public class TagController {
 
 	private static final Logger logger = LoggerFactory.getLogger(TagController.class);
@@ -67,7 +67,6 @@ public class TagController {
 	@DeleteMapping("/admin/articles/{articleId}/tags/{tagId}")
 	public ApiResponse<String> deleteArticleTag(@PathVariable Long articleId, @PathVariable Long tagId) {
 		logger.info("删除文章标签，文章ID: {}, 标签ID: {}", articleId, tagId);
-		try {
 			// 检查文章是否存在
 			Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
 
@@ -95,15 +94,6 @@ public class TagController {
 
 			logger.info("文章标签删除成功");
 			return ApiResponse.success("文章标签删除成功");
-		}
-		catch (ResourceNotFoundException e) {
-			logger.error("删除文章标签失败: {}", e.getMessage());
-			return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage());
-		}
-		catch (Exception e) {
-			logger.error("删除文章标签失败: {}", e.getMessage());
-			return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "删除文章标签失败: " + e.getMessage());
-		}
 	}
 
 	// 为文章添加标签
@@ -111,7 +101,6 @@ public class TagController {
 	@PostMapping("/admin/articles/{articleId}/tags")
 	public ApiResponse<List<Tag>> addArticleTags(@PathVariable Long articleId, @RequestBody List<String> tagNames) {
 		logger.info("为文章添加标签，文章ID: {}, 标签数量: {}", articleId, tagNames.size());
-		try {
 			// 检查文章是否存在
 			Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
 
@@ -129,22 +118,12 @@ public class TagController {
 
 			logger.info("文章标签添加成功");
 			return ApiResponse.success(tags);
-		}
-		catch (ResourceNotFoundException e) {
-			logger.error("添加文章标签失败: {}", e.getMessage());
-			return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage());
-		}
-		catch (Exception e) {
-			logger.error("添加文章标签失败: {}", e.getMessage());
-			return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "添加文章标签失败: " + e.getMessage());
-		}
 	}
 
 	// 获取文章的所有标签
 	@GetMapping("/articles/{articleId}")
 	public ApiResponse<List<Tag>> getArticleTags(@PathVariable Long articleId) {
 		logger.info("获取文章标签，文章ID: {}", articleId);
-		try {
 			// 检查文章是否存在
 			Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
 
@@ -160,30 +139,15 @@ public class TagController {
 
 			logger.info("成功获取文章标签，数量: {}", tags.size());
 			return ApiResponse.success(tags);
-		}
-		catch (ResourceNotFoundException e) {
-			logger.error("获取文章标签失败: {}", e.getMessage());
-			return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage());
-		}
-		catch (Exception e) {
-			logger.error("获取文章标签失败: {}", e.getMessage());
-			return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "获取文章标签失败: " + e.getMessage());
-		}
 	}
 
 	// 获取所有标签
 	@GetMapping
 	public ApiResponse<List<Tag>> getAllTags() {
 		logger.info("获取所有标签");
-		try {
 			List<Tag> tags = tagRepository.findAll();
 			logger.info("成功获取所有标签，数量: {}", tags.size());
 			return ApiResponse.success(tags);
-		}
-		catch (Exception e) {
-			logger.error("获取所有标签失败: {}", e.getMessage());
-			return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "获取所有标签失败: " + e.getMessage());
-		}
 	}
 
 	// 根据标签获取文章列表
@@ -191,7 +155,6 @@ public class TagController {
 	public ApiResponse<ArticleListDTO> articlesByTag(@PathVariable String tagName,
 			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
 		logger.info("获取标签 [{}] 文章列表，页码: {}, 每页数量: {}", tagName, page, size);
-		try {
 			// 查找标签
 			Tag tag = tagRepository.findByName(tagName).orElseThrow(() -> new ResourceNotFoundException("标签不存在"));
 
@@ -211,17 +174,8 @@ public class TagController {
 
 			ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
 			logger.info("成功获取标签 [{}] 文章列表，共 {} 页，当前第 {} 页", tagName, articleListDTO.getTotalPages(),
-					articleListDTO.getCurrentPage());
+            articleListDTO.getCurrentPage());
 			return ApiResponse.success(articleListDTO);
 		}
-		catch (ResourceNotFoundException e) {
-			logger.error("获取标签文章列表失败: {}", e.getMessage());
-			return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage());
-		}
-		catch (Exception e) {
-			logger.error("获取标签文章列表失败: {}", e.getMessage());
-			return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "获取标签文章列表失败: " + e.getMessage());
-		}
-	}
 
 }

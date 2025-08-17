@@ -11,17 +11,15 @@ public class ArticleDTO {
 
 	private Long id;
 
-	private Long articleId;
-
 	private String title;
 
 	private String content;
 
 	private String category;
 
-	private boolean addAttach;
+	private boolean hasAttachment;
 
-	private boolean addPicture;
+	private boolean hasCoverImage;
 
 	private LocalDateTime createTime;
 

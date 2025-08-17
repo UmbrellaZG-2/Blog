@@ -158,10 +158,10 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 
 			// 从数据库删除图片信息
 			articlePictureRepository.deleteByArticle(article);
-			log.info("Image information deleted from database for article: {}", article.getArticleId());
+			log.info("Image information deleted from database for article: {}", article.getId());
 		}
 		else {
-			log.info("No picture found for article: {}", article.getArticleId());
+			log.info("No picture found for article: {}", article.getId());
 		}
 	}
 

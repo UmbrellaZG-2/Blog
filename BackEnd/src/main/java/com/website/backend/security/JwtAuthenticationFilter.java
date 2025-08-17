@@ -55,6 +55,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	private static final List<String> PUBLIC_PATHS = Arrays.asList(
 			"/api/articles/categories",
 			"/api/articles/categories/**",
+			"/api/articles/category",
+			"/api/articles/category/**",
 			"/api/tags",
 			"/api/tags/**",
 			"/api/attachments",
