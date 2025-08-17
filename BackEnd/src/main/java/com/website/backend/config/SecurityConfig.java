@@ -1,5 +1,7 @@
 package com.website.backend.config;
 
+
+
 import java.io.IOException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -91,26 +93,17 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-			.csrf(csrf -> csrf.disable())
-			.authorizeHttpRequests(auth -> auth
-				// 允许所有用户访问的API
-				// 认证相关API
-.requestMatchers("/auth", "/auth/**", "/login")
-.permitAll()
-// 允许所有用户访问的API
-.requestMatchers("/", "/aboutMe", "/aboutMe.html", "/aboutme", "/articles/**", "/guestbook/**")
-.permitAll()
-				// 管理员操作API需要ADMIN角色
-				.requestMatchers("/api/admin/**")
-				.hasRole("ADMIN")
-				// 其他所有请求需要认证
-				.anyRequest()
-				.authenticated())
-			.sessionManagement(session -> session
-				.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
-			.authenticationProvider(authenticationProvider())
-			.addFilterBefore(requestLoggingFilter(), UsernamePasswordAuthenticationFilter.class)
-			.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+		.csrf(csrf -> csrf.disable())
+		.authorizeHttpRequests(auth -> auth
+			.requestMatchers("/api/tags", "/api/tags/**", "/auth/**", "/attachments/**")
+			.permitAll()
+			.requestMatchers("/admin/**")
+			.hasRole("ADMIN")
+			.anyRequest()
+			.authenticated())
+		.sessionManagement(session -> session
+			.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
+		.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
 	}

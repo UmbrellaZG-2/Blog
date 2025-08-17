@@ -30,6 +30,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Page;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.Query;
 
 @RestController
 @RequestMapping("/articles")
@@ -223,6 +224,21 @@ public class ArticleController {
 		catch (Exception e) {
 			logger.error("获取所有标签失败: {}", e.getMessage());
 			return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "获取所有标签失败: " + e.getMessage());
+		}
+	}
+
+	// 获取所有分类
+	@GetMapping("/categories")
+	public ApiResponse<List<String>> getAllCategories() {
+		logger.info("获取所有分类");
+		try {
+			List<String> categories = articleRepo.findDistinctCategories();
+			logger.info("成功获取所有分类，数量: {}", categories.size());
+			return ApiResponse.success(categories);
+		}
+		catch (Exception e) {
+			logger.error("获取所有分类失败: {}", e.getMessage());
+			return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "获取所有分类失败: " + e.getMessage());
 		}
 	}
 

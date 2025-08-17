@@ -3,6 +3,7 @@ package com.website.backend.repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
@@ -23,5 +24,9 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
 	// 根据文章标题模糊搜索
 	Page<Article> findByTitleContaining(String title, Pageable pageable);
+
+	// 获取所有不同的分类
+	@Query("SELECT DISTINCT a.category FROM Article a")
+	List<String> findDistinctCategories();
 
 }
