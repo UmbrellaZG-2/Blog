@@ -175,36 +175,6 @@ public class ArticleController {
 		return ApiResponse.success(comments);
 	}
 
-	// 获取文章的所有标签
-	@GetMapping("/{articleId}/tags")
-	public ApiResponse<List<Tag>> getArticleTags(@PathVariable Long articleId) {
-		logger.info("获取文章标签，文章ID: {}", articleId);
-		// 检查文章是否存在
-		Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
-
-		// 通过article_tags关联表查询标签ID
-		List<ArticleTag> articleTags = articleTagRepository.findByArticleId(articleId);
-		List<Long> tagIds = articleTags.stream().map(ArticleTag::getTagId).collect(Collectors.toList());
-
-		// 根据标签ID查询标签信息
-		List<Tag> tags = new ArrayList<>();
-		if (!tagIds.isEmpty()) {
-			tags = tagRepository.findAllById(tagIds);
-		}
-
-		logger.info("成功获取文章标签，数量: {}", tags.size());
-		return ApiResponse.success(tags);
-	}
-
-	// 获取所有标签
-	@GetMapping("/tags")
-	public ApiResponse<List<Tag>> getAllTags() {
-		logger.info("获取所有标签");
-		List<Tag> tags = tagRepository.findAll();
-		logger.info("成功获取所有标签，数量: {}", tags.size());
-		return ApiResponse.success(tags);
-	}
-
 	// 获取所有分类
 	@GetMapping("/categories")
 	public ApiResponse<List<String>> getAllCategories() {
@@ -212,33 +182,6 @@ public class ArticleController {
 		List<String> categories = articleRepo.findDistinctCategories();
 		logger.info("成功获取所有分类，数量: {}", categories.size());
 		return ApiResponse.success(categories);
-	}
-
-	// 根据标签获取文章列表
-	@GetMapping("/tag/{tagName}")
-	public ApiResponse<ArticleListDTO> articlesByTag(@PathVariable String tagName,
-			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
-		logger.info("获取标签 [{}] 文章列表，页码: {}, 每页数量: {}", tagName, page, size);
-		// 查找标签
-		Tag tag = tagRepository.findByName(tagName).orElseThrow(() -> new ResourceNotFoundException("标签不存在"));
-
-		// 通过article_tags关联表查询文章ID
-		List<ArticleTag> articleTags = articleTagRepository.findByTagId(tag.getId());
-		List<Long> articleIds = articleTags.stream().map(ArticleTag::getArticleId).toList();
-
-		// 根据文章ID查询文章信息并分页
-		Pageable pageable = PageRequest.of(page, size);
-		Page<Article> articlePage;
-		if (articleIds.isEmpty()) {
-			articlePage = Page.empty(pageable);
-		} else {
-			articlePage = articleRepo.findByIdIn(new ArrayList<>(articleIds), pageable);
-		}
-
-		ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
-		logger.info("成功获取标签 [{}] 文章列表，共 {} 页，当前第 {} 页", tagName, articleListDTO.getTotalPages(),
-				articleListDTO.getCurrentPage());
-		return ApiResponse.success(articleListDTO);
 	}
 
 }

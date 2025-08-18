@@ -18,4 +18,7 @@ public interface ArticleTagRepository extends JpaRepository<ArticleTag, Long> {
 	// 删除文章与标签的关联
 	void deleteByArticleIdAndTagId(Long articleId, Long tagId);
 
+	// 检查文章与标签是否关联
+	boolean existsByArticleIdAndTagId(Long articleId, Long tagId);
+
 }

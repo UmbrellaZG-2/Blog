@@ -44,7 +44,7 @@ export const getArticleById = async (id) => {
 };
 
 export const getCategories = async () => {
-  return api.get('/categories');
+  return api.get('/articles/categories');
 };
 
 export const getTags = async () => {

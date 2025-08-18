@@ -96,8 +96,71 @@ public class TagController {
 			return ApiResponse.success("文章标签删除成功");
 	}
 
-	// 为文章添加标签
-	@PreAuthorize("hasRole('ADMIN')")
+	// 为文章添加单个标签
+@PreAuthorize("hasRole('ADMIN')")
+@PostMapping("/admin/articles/{articleId}/tag")
+public ApiResponse<String> addArticleTag(@PathVariable Long articleId, @RequestParam String tagName) {
+    logger.info("为文章添加标签，文章ID: {}, 标签名: {}", articleId, tagName);
+    // 检查文章是否存在
+    Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+
+    // 查找或创建标签
+    Tag tag = tagRepository.findByName(tagName).orElseGet(() -> {
+        Tag newTag = new Tag();
+        newTag.setName(tagName);
+        return tagRepository.save(newTag);
+    });
+
+    // 检查文章和标签是否已关联
+    boolean isAssociated = articleTagRepository.existsByArticleIdAndTagId(articleId, tag.getId());
+    if (isAssociated) {
+        return ApiResponse.success("文章已添加该标签");
+    }
+
+    // 创建关联
+    ArticleTag articleTag = new ArticleTag();
+    articleTag.setArticleId(articleId);
+    articleTag.setTagId(tag.getId());
+    articleTagRepository.save(articleTag);
+
+    logger.info("文章标签添加成功");
+    return ApiResponse.success("文章标签添加成功");
+}
+
+// 获取文章的所有标签
+@GetMapping("/articles/{articleId}")
+public ApiResponse<List<Tag>> getArticleTags(@PathVariable Long articleId) {
+    logger.info("获取文章标签，文章ID: {}", articleId);
+    // 检查文章是否存在
+    Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+
+    // 通过article_tags关联表查询标签ID
+    List<ArticleTag> articleTags = articleTagRepository.findByArticleId(articleId);
+    List<Long> tagIds = articleTags.stream().map(ArticleTag::getTagId).collect(Collectors.toList());
+
+    // 根据标签ID查询标签信息
+    List<Tag> tags = new ArrayList<>();
+    if (!tagIds.isEmpty()) {
+        tags = tagRepository.findAllById(tagIds);
+    }
+
+    logger.info("成功获取文章标签，数量: {}", tags.size());
+    return ApiResponse.success(tags);
+}
+
+// 获取所有标签
+@GetMapping
+public ApiResponse<List<Tag>> getAllTags() {
+    logger.info("获取所有标签");
+    List<Tag> tags = tagRepository.findAll();
+    logger.info("成功获取所有标签，数量: {}", tags.size());
+    return ApiResponse.success(tags);
+}
+
+
+
+// 原有的删除文章标签方法
+@PreAuthorize("hasRole('ADMIN')")
 	@PostMapping("/admin/articles/{articleId}/tags")
 	public ApiResponse<List<Tag>> addArticleTags(@PathVariable Long articleId, @RequestBody List<String> tagNames) {
 		logger.info("为文章添加标签，文章ID: {}, 标签数量: {}", articleId, tagNames.size());
@@ -120,35 +183,7 @@ public class TagController {
 			return ApiResponse.success(tags);
 	}
 
-	// 获取文章的所有标签
-	@GetMapping("/articles/{articleId}")
-	public ApiResponse<List<Tag>> getArticleTags(@PathVariable Long articleId) {
-		logger.info("获取文章标签，文章ID: {}", articleId);
-			// 检查文章是否存在
-			Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
 
-			// 通过article_tags关联表查询标签ID
-			List<ArticleTag> articleTags = articleTagRepository.findByArticleId(articleId);
-			List<Long> tagIds = articleTags.stream().map(ArticleTag::getTagId).collect(Collectors.toList());
-
-			// 根据标签ID查询标签信息
-			List<Tag> tags = new ArrayList<>();
-			if (!tagIds.isEmpty()) {
-				tags = tagRepository.findAllById(tagIds);
-			}
-
-			logger.info("成功获取文章标签，数量: {}", tags.size());
-			return ApiResponse.success(tags);
-	}
-
-	// 获取所有标签
-	@GetMapping
-	public ApiResponse<List<Tag>> getAllTags() {
-		logger.info("获取所有标签");
-			List<Tag> tags = tagRepository.findAll();
-			logger.info("成功获取所有标签，数量: {}", tags.size());
-			return ApiResponse.success(tags);
-	}
 
 	// 根据标签获取文章列表
 	@GetMapping("/{tagName}/articles")

@@ -3,6 +3,8 @@ package com.website.backend.config;
 
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Enumeration;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,7 +28,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
-import java.util.Enumeration;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.website.backend.security.JwtAuthenticationFilter;
 import com.website.backend.security.JwtTokenProvider;
@@ -79,7 +80,7 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.addAllowedOriginPattern("*"); // 允许所有来源
+		configuration.setAllowedOrigins(List.of("https://101.200.43.186:8082"));
 		configuration.addAllowedMethod("*");
 		configuration.addAllowedHeader("*");
 		configuration.setAllowCredentials(true);
@@ -95,7 +96,7 @@ public class SecurityConfig {
 		http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 		.csrf(csrf -> csrf.disable())
 		.authorizeHttpRequests(auth -> auth
-			.requestMatchers("/api/tags", "/api/tags/**", "/auth/**", "/attachments/**")
+			.requestMatchers("/api/tags", "/api/tags/**", "/api/articles/categories", "/auth/**", "/attachments/**")
 			.permitAll()
 			.requestMatchers("/admin/**")
 			.hasRole("ADMIN")
