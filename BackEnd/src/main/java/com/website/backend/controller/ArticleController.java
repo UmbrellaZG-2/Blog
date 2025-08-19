@@ -79,6 +79,13 @@ public class ArticleController {
 		// 使用分页查询
 		Pageable pageable = PageRequest.of(page, size);
 		Page<Article> articlePage = articleRepo.findAll(pageable);
+  
+  		if (articlePage.isEmpty()) {
+  			logger.info("数据库中未找到任何文章");
+  			// 返回空分页对象
+  			return ApiResponse.success(buildArticleListDTO(Page.empty(pageable)));
+  		}
+  
 		ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
 		logger.info("成功获取文章列表，共 {} 页，当前第 {} 页", articleListDTO.getTotalPages(), articleListDTO.getCurrentPage());
 		return ApiResponse.success(articleListDTO);
@@ -134,6 +141,13 @@ public class ArticleController {
 		// 使用分页查询按分类获取文章
 		Pageable pageable = PageRequest.of(page, size);
 		Page<Article> articlePage = articleRepo.findByCategory(category, pageable);
+  
+  		if (articlePage.isEmpty()) {
+  			logger.info("分类 [{}] 下未找到任何文章", category);
+  			// 返回空分页对象
+  			return ApiResponse.success(buildArticleListDTO(Page.empty(pageable)));
+  		}
+  
 		ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
 		logger.info("成功获取分类 [{}] 文章列表，共 {} 页，当前第 {} 页", category, articleListDTO.getTotalPages(),
 				articleListDTO.getCurrentPage());
@@ -180,6 +194,12 @@ public class ArticleController {
 	public ApiResponse<List<String>> getAllCategories() {
 		logger.info("获取所有分类");
 		List<String> categories = articleRepo.findDistinctCategories();
+		
+		if (categories.isEmpty()) {
+			logger.info("数据库中未找到任何分类");
+			return ApiResponse.success(new ArrayList<>());
+		}
+		
 		logger.info("成功获取所有分类，数量: {}", categories.size());
 		return ApiResponse.success(categories);
 	}

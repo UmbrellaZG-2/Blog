@@ -80,7 +80,7 @@ public class SecurityConfig {
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOrigins(List.of("https://101.200.43.186:8082"));
+		configuration.setAllowedOrigins(List.of("https://101.200.43.186:8082", "http://localhost:8083"));
 		configuration.addAllowedMethod("*");
 		configuration.addAllowedHeader("*");
 		configuration.setAllowCredentials(true);
@@ -96,7 +96,7 @@ public class SecurityConfig {
 		http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 		.csrf(csrf -> csrf.disable())
 		.authorizeHttpRequests(auth -> auth
-			.requestMatchers("/api/tags", "/api/tags/**", "/api/articles/categories", "/auth/**", "/attachments/**")
+			.requestMatchers("/tags/**", "/articles/categories/**", "/auth/**", "/attachments/**")
 			.permitAll()
 			.requestMatchers("/admin/**")
 			.hasRole("ADMIN")

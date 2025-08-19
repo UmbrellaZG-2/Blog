@@ -32,9 +32,11 @@ public class Article {
 	private String category;
 
 	/** 是否有附件 */
+	@Column(name = "add_attach")
 	private boolean hasAttachment = false;
 
 	/** 是否有封面图片 */
+	@Column(name = "add_picture")
 	private boolean hasCoverImage = false;
 
 	/** 创建时间 */
