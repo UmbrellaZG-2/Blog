@@ -53,14 +53,14 @@ public class GuestServiceImpl implements GuestService {
 		log.info("保存游客信息到Redis: {}", username);
 
 		// 获取游客角色
-		Role visitorRole = roleRepository.findByName(Role.RoleName.ROLE_VISITOR)
+		Role visitorRole = roleRepository.findByName("ROLE_VISITOR")
 			.orElseThrow(() -> new RuntimeException("游客角色不存在"));
 
 		// 创建游客信息Map
 		Map<String, Object> guestInfo = new HashMap<>();
 		guestInfo.put("username", username);
 		guestInfo.put("password", passwordEncoder.encode(password));
-		guestInfo.put("role", visitorRole.getName().name());
+		guestInfo.put("role", visitorRole.getName());
 
 		// 存储到Redis并设置过期时间
 		String redisKey = REDIS_KEY_PREFIX + username;

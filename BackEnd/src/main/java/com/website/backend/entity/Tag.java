@@ -2,6 +2,7 @@ package com.website.backend.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.GeneratedValue;
 import java.time.LocalDateTime;
 import jakarta.persistence.GenerationType;
@@ -27,7 +28,12 @@ public class Tag {
 	private String name;
 
 	/** 创建时间 */
-	@Column(nullable = false)
+	@Column(nullable = false, columnDefinition = "TIMESTAMP")
 	private LocalDateTime createTime;
+
+	@PrePersist
+	protected void onCreate() {
+		createTime = LocalDateTime.now();
+	}
 
 }

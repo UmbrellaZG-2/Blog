@@ -38,7 +38,7 @@ public class Comment {
 	private String content;
 
 	/** 创建时间 */
-	@Column(nullable = false)
+	@Column(nullable = false, columnDefinition = "TIMESTAMP")
 	private LocalDateTime createTime;
 
 	/** 评论者IP地址 */

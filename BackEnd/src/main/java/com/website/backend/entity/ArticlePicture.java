@@ -24,6 +24,7 @@ public class ArticlePicture {
 
 	private Long fileSize;
 
+	@Column(name = "upload_time", columnDefinition = "TIMESTAMP")
 	private LocalDateTime uploadTime;
 
 	@OneToOne

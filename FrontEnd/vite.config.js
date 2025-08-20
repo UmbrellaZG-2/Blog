@@ -30,7 +30,7 @@ const plugins = isProdEnv
 export default defineConfig(({ mode }) => {
   // 加载环境变量
   const env = loadEnv(mode, process.cwd(), 'VITE_');
-  const apiBaseUrl = env.VITE_API_BASE_URL || 'http://localhost:8083/api';
+  const apiBaseUrl = env.VITE_API_BASE_URL || 'http://101.200.43.186:8081/api';
   const proxyTarget = apiBaseUrl.replace(/\/api$/, '');
 
   // 确保proxyTarget有值
@@ -41,7 +41,7 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       host: '::',
-      port: '8082',
+      port: 8082,
       hmr: {
         overlay: false,
       },

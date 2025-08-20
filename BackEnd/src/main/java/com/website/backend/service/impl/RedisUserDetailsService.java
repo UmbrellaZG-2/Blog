@@ -83,10 +83,10 @@ public class RedisUserDetailsService implements UserDetailsService {
 		String password = (String) guestInfo.get("password");
 
 		// 获取游客角色
-		Role visitorRole = roleRepository.findByName(Role.RoleName.ROLE_VISITOR)
+		Role visitorRole = roleRepository.findByName("ROLE_VISITOR")
 			.orElseThrow(() -> new UsernameNotFoundException("游客角色不存在"));
 
-		List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(visitorRole.getName().name()));
+		List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(visitorRole.getName()));
 
 		log.info("成功从Redis加载游客 {}", maskUsername(username));
 		return new User(username, password, authorities);
@@ -98,7 +98,7 @@ public class RedisUserDetailsService implements UserDetailsService {
 
 		List<SimpleGrantedAuthority> authorities = user.getRoles()
 			.stream()
-			.map(role -> new SimpleGrantedAuthority(role.getName().name()))
+			.map(role -> new SimpleGrantedAuthority(role.getName()))
 			.toList();
 
 		log.info("成功从数据库加载用户 {}", maskUsername(username));

@@ -1,6 +1,7 @@
 package com.website.backend.entity;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import lombok.Data;
@@ -26,6 +27,14 @@ public class User {
 	@Column(nullable = false)
 	private String password;
 
+	/** 创建时间 */
+	@Column(name = "create_time", nullable = false)
+	private LocalDateTime createTime;
+
+	/** 更新时间 */
+	@Column(name = "update_time", nullable = false)
+	private LocalDateTime updateTime;
+
 	/** 用户角色集合，EAGER 立即加载 */
 	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"),
@@ -38,6 +47,17 @@ public class User {
 	 */
 	public void addRole(Role role) {
 		this.roles.add(role);
+	}
+
+	@PrePersist
+	protected void onCreate() {
+		createTime = LocalDateTime.now();
+		updateTime = LocalDateTime.now();
+	}
+
+	@PreUpdate
+	protected void onUpdate() {
+		updateTime = LocalDateTime.now();
 	}
 
 }

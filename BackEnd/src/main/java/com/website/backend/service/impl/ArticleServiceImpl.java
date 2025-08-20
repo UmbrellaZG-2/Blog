@@ -114,7 +114,10 @@ public class ArticleServiceImpl implements ArticleService {
 
 		// 保存文章
 		Article savedArticle = articleRepository.save(article);
-		log.info("文章保存成功，ID: {}", savedArticle.getId());
+		// 设置文章业务标识ID与主键ID相同
+		savedArticle.setArticleId(savedArticle.getId());
+		savedArticle = articleRepository.save(savedArticle);
+		log.info("文章保存成功，ID: {}, 业务标识: {}", savedArticle.getId(), savedArticle.getArticleId());
 
 		// 处理附件
 		if (attachment != null && !attachment.isEmpty()) {

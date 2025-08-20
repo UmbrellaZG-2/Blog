@@ -13,11 +13,15 @@ import java.time.LocalDateTime;
 @Data
 public class Article {
 
-	/** 主键ID，同时作为业务标识 */
+	/** 主键ID */
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(nullable = false, unique = true)
 	private Long id;
+
+	/** 文章编号，用于业务标识 */
+	@Column(name = "article_id", nullable = false, unique = true)
+	private Long articleId;
 
 	/** 文章标题 */
 	@Column(length = 100)

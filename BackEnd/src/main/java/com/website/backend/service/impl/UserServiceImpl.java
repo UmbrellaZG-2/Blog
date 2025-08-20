@@ -64,14 +64,14 @@ public User registerUser(String username, String password, boolean isAdmin) {
 	// 设置用户角色
 	Set<Role> roles = new HashSet<>();
 	if (isAdmin) {
-		Role adminRole = roleRepository.findByName(Role.RoleName.ROLE_ADMIN).orElseThrow(() -> {
+		Role adminRole = roleRepository.findByName("ROLE_ADMIN").orElseThrow(() -> {
 			log.error("角色不存在: ROLE_ADMIN");
 			return new RuntimeException("角色不存在: ROLE_ADMIN");
 		});
 		roles.add(adminRole);
 		log.info("用户 {} 被设置为管理员角色", username);
 	} else {
-		Role visitorRole = roleRepository.findByName(Role.RoleName.ROLE_VISITOR).orElseThrow(() -> {
+		Role visitorRole = roleRepository.findByName("ROLE_VISITOR").orElseThrow(() -> {
 			log.error("角色不存在: ROLE_VISITOR");
 			return new RuntimeException("角色不存在: ROLE_VISITOR");
 		});

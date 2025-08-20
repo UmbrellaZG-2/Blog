@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface RoleRepository extends JpaRepository<Role, Long> {
 
-	Optional<Role> findByName(Role.RoleName name);
+	Optional<Role> findByName(String name);
 	// 继承自JpaRepository的方法已包含findById等CRUD操作
 
 }
