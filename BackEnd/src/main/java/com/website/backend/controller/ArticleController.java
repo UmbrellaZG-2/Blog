@@ -3,34 +3,28 @@ package com.website.backend.controller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
-import com.website.backend.constant.HttpStatusConstants;
 import org.springframework.web.bind.annotation.*;
 
 import com.website.backend.entity.Article;
-import com.website.backend.entity.ArticleTag;
 import com.website.backend.entity.Comment;
-import com.website.backend.entity.Tag;
-import com.website.backend.model.ApiResponse;
 import com.website.backend.repository.ArticleRepository;
 import com.website.backend.repository.CommentRepository;
 import com.website.backend.repository.TagRepository;
 import com.website.backend.repository.ArticleTagRepository;
 import com.website.backend.DTO.ArticleDTO;
 import com.website.backend.DTO.ArticleListDTO;
-import com.website.backend.DTO.DeleteArticleResponseDTO;
 import com.website.backend.util.DTOConverter;
 import jakarta.servlet.http.HttpServletRequest;
 
 import com.website.backend.exception.ResourceNotFoundException;
+import com.website.backend.model.ApiResponse;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Page;
 import java.util.UUID;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.beans.BeanUtils;
 
 @RestController
@@ -42,8 +36,6 @@ public class ArticleController {
 	private final ArticleRepository articleRepo;
     private final DTOConverter dtoConverter;
     private final CommentRepository commentRepository;
-    private final TagRepository tagRepository;
-    private final ArticleTagRepository articleTagRepository;
 
 	public ArticleController(ArticleRepository articleRepo, DTOConverter dtoConverter,
 			CommentRepository commentRepository, TagRepository tagRepository,
@@ -51,8 +43,6 @@ public class ArticleController {
 		this.articleRepo = articleRepo;
 		this.dtoConverter = dtoConverter;
 		this.commentRepository = commentRepository;
-		this.tagRepository = tagRepository;
-		this.articleTagRepository = articleTagRepository;
 	}
 
 	// 抽取公共方法处理分页和DTO转换

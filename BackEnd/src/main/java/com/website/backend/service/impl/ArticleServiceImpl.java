@@ -266,13 +266,4 @@ public class ArticleServiceImpl implements ArticleService {
 		log.info("文章删除成功，ID: {}", id);
 	}
 
-	/**
-	 * 生成唯一的文章编号
-	 * @return 文章编号
-	 */
-	private Long generateArticleId() {
-		// 使用UUID的一部分生成唯一编号
-		return Math.abs(UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE);
-	}
-
 }

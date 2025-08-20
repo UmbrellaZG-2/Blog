@@ -90,10 +90,10 @@ public class AuthController {
 			}
 
 			// 生成JWT令牌
-Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+Authentication authentication = authenticationManager.authenticate(
+    new UsernamePasswordAuthenticationToken(username, password)
+);
 String jwt = jwtTokenProvider.generateToken(authentication);
-
-
 
 			Map<String, String> response = new HashMap<>();
 			response.put("token", jwt);

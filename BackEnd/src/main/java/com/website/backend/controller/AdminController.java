@@ -12,7 +12,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -68,8 +67,6 @@ public class AdminController {
 
 	private final DTOConverter dtoConverter;
 
-	private final CommentRepository commentRepository;
-
 	private final TagRepository tagRepository;
 
 	private final ArticleTagRepository articleTagRepository;
@@ -94,7 +91,6 @@ public class AdminController {
 		this.jwtTokenProvider = jwtTokenProvider;
 		this.articleRepo = articleRepo;
 		this.dtoConverter = dtoConverter;
-		this.commentRepository = commentRepository;
 		this.tagRepository = tagRepository;
 		this.articleTagRepository = articleTagRepository;
 		this.attachmentRepository = attachmentRepository;
@@ -237,7 +233,7 @@ public class AdminController {
 				return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, "文章不存在");
 			}
 
-			Article article = articleOptional.get();
+// 由于变量 article 未被使用，直接删除此赋值语句
 			// 注意: 附件和图片清理功能已迁移到AttachmentController
 			// 删除文章前请先调用 /api/attachments/admin/articles/{id}/cleanup 接口清理附件和图片
 
@@ -257,9 +253,6 @@ public class AdminController {
 	@DeleteMapping("/articles/{articleId}/tags/{tagId}")
 	public ApiResponse<String> deleteArticleTag(@PathVariable Long articleId, @PathVariable Long tagId) {
 		logger.info("删除文章标签，文章ID: {}, 标签ID: {}", articleId, tagId);
-			// 检查文章是否存在
-			Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
-
 			// 检查标签是否存在
 			Tag tag = tagRepository.findById(tagId).orElseThrow(() -> new ResourceNotFoundException("标签不存在"));
 
@@ -289,9 +282,6 @@ public class AdminController {
 	@PostMapping("/articles/{articleId}/tags")
 	public ApiResponse<List<Tag>> addArticleTags(@PathVariable Long articleId, @RequestBody List<String> tagNames) {
 		logger.info("为文章添加标签，文章ID: {}, 标签数量: {}", articleId, tagNames.size());
-			// 检查文章是否存在
-			Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
-
 			List<Tag> tags = new ArrayList<>();
 			for (String tagName : tagNames) {
 				// 查找或创建标签

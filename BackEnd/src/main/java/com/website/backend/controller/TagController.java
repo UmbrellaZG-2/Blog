@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import com.website.backend.constant.HttpStatusConstants;
 import com.website.backend.entity.Article;
 import com.website.backend.entity.Tag;
 import com.website.backend.entity.ArticleTag;
@@ -190,21 +189,26 @@ public ApiResponse<List<Tag>> getAllTags() {
 	public ApiResponse<ArticleListDTO> articlesByTag(@PathVariable String tagName,
 			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
 		logger.info("获取标签 [{}] 文章列表，页码: {}, 每页数量: {}", tagName, page, size);
-			// 查找标签
-			Tag tag = tagRepository.findByName(tagName).orElseThrow(() -> new ResourceNotFoundException("标签不存在"));
+			// 查找标签，如果不存在则返回空结果
+			Tag tag = tagRepository.findByName(tagName).orElse(null);
 
-			// 通过article_tags关联表查询文章ID
-			List<ArticleTag> articleTags = articleTagRepository.findByTagId(tag.getId());
-			List<Long> articleIds = articleTags.stream().map(ArticleTag::getArticleId).toList();
-
-			// 根据文章ID查询文章信息并分页
 			Pageable pageable = PageRequest.of(page, size);
 			Page<Article> articlePage;
-			if (articleIds.isEmpty()) {
+
+			if (tag == null) {
+				logger.info("标签 [{}] 不存在", tagName);
 				articlePage = Page.empty(pageable);
-			}
-			else {
-				articlePage = articleRepo.findByIdIn(new ArrayList<>(articleIds), pageable);
+			} else {
+				// 通过article_tags关联表查询文章ID
+				List<ArticleTag> articleTags = articleTagRepository.findByTagId(tag.getId());
+				List<Long> articleIds = articleTags.stream().map(ArticleTag::getArticleId).toList();
+
+				// 根据文章ID查询文章信息并分页
+				if (articleIds.isEmpty()) {
+					articlePage = Page.empty(pageable);
+				} else {
+					articlePage = articleRepo.findByIdIn(new ArrayList<>(articleIds), pageable);
+				}
 			}
 
 			ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);

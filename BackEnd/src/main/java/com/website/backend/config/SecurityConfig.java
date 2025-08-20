@@ -22,7 +22,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -32,6 +31,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import com.website.backend.security.JwtAuthenticationFilter;
 import com.website.backend.security.JwtTokenProvider;
 import com.website.backend.service.impl.RedisUserDetailsService;
+
+import io.micrometer.common.lang.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Configuration
@@ -116,7 +117,7 @@ public class SecurityConfig {
 	public OncePerRequestFilter requestLoggingFilter() {
 		return new OncePerRequestFilter() {
 			@Override
-			protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+			protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
 					throws ServletException, IOException {
 				// 包装请求以缓存请求体
 				ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
