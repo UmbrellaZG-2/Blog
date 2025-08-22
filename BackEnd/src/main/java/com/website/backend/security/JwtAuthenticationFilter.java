@@ -3,6 +3,7 @@ package com.website.backend.security;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,49 +49,40 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	 * @throws ServletException 如果发生Servlet相关异常
 	 * @throws IOException 如果发生IO异常
 	 */
-	// 路径匹配器，用于匹配URL路径模式
-	private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
+	// 公开路径列表，与SecurityConfig中的配置保持一致
+    private static final List<String> PUBLIC_PATHS = Arrays.asList(
+        "/api/articles/**",
+        "/api/attachments/download/**",
+        "/api/attachments/article/get/**",
+        "/api/auth/get",
+        "/api/auth/login",
+        "/api/auth/admin/login",
+        "/api/auth/guest/login",
+        "/api/auth/admin/register",
+        "/api/home/**",
+        "/api/images/article/**/cover/get",
+        "/api/images/article/**/getAll",
+        "/api/tags/**",
+        "/api/articles/categories/get",
+        "/api/test/get",
+        "/api/test/post"
+    );
 
-	// 公开路径列表，不需要JWT认证
-	private static final List<String> PUBLIC_PATHS = Arrays.asList(
-			"/api/articles/categories",
-			"/api/articles/categories/**",
-			"/api/articles/category",
-			"/api/articles/category/**",
-			"/api/tags",
-			"/api/tags/**",
-			"/api/attachments",
-			"/api/attachments/**",
-			"/auth/**",
-			"/api/auth/**",
-			"/login",
-			"/",
-			"/aboutMe",
-			"/aboutMe.html",
-			"/aboutme",
-			"/articles/**",
-			"/guestbook/**",
-			"/api/query/**",
-			"/api/search/**"
-	);
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
-		// 检查是否是公开路径
-		String requestPath = request.getRequestURI();
-		log.info("请求路径: {}", requestPath);
-		boolean isPublicPath = PUBLIC_PATHS.stream().anyMatch(path -> PATH_MATCHER.match(path, requestPath));
-		log.info("是否公开路径: {}", isPublicPath);
-
-		if (isPublicPath) {
-			// 公开路径直接放行
-			log.info("公开路径，直接放行: {}", requestPath);
-			filterChain.doFilter(request, response);
-			return;
+		// 检查是否为公开路径
+		String requestURI = request.getRequestURI();
+		for (String publicPath : PUBLIC_PATHS) {
+			if (pathMatcher.match(publicPath, requestURI)) {
+				filterChain.doFilter(request, response);
+				return;
+			}
 		}
 
-		// 非公开路径进行JWT认证
+		// 非公开路径，需要JWT认证
 		try {
 			String jwt = parseJwt(request);
 			if (jwt != null && tokenProvider.validateJwtToken(jwt)) {
@@ -104,14 +96,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 				SecurityContextHolder.getContext().setAuthentication(authentication);
 				filterChain.doFilter(request, response);
 			} else {
-				// 没有有效的JWT令牌，拒绝请求
-				log.info("非公开路径，没有有效的JWT令牌，拒绝请求: {}", requestPath);
 				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 				response.getWriter().write("Unauthorized: No valid JWT token provided");
 			}
 		}
 		catch (Exception e) {
-			log.error("无法设置用户认证: {}", e.getMessage());
 			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 			response.getWriter().write("Unauthorized: Invalid JWT token");
 		}

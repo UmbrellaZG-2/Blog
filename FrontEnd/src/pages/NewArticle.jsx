@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Save, Eye, Upload, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { saveDraft, createArticle, saveDraftWithAttachments, createArticleWithAttachments } from '@/services/api';
 import {
   Select,
   SelectContent,
@@ -85,20 +86,40 @@ const NewArticle = () => {
       return;
     }
 
-    // 模拟保存文章（包括附件信息）
-    const articleData = {
-      ...formData,
-      tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
-      attachments: attachments.map(att => ({
-        name: att.name,
-        size: att.size,
-        type: att.type
-      }))
-    };
-    
-    console.log('保存文章:', articleData);
-    toast.success('文章保存成功！');
-    navigate('/admin/articles');
+    try {
+      // 准备文章数据
+      const articleData = {
+        title: formData.title,
+        category: formData.category,
+        content: formData.content,
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
+        coverImage: formData.coverImage
+      };
+      
+      // 根据状态和是否有附件调用不同的API
+      if (attachments.length > 0) {
+        if (formData.status === 'draft') {
+          await saveDraftWithAttachments(articleData, attachments);
+          toast.success('带附件的草稿保存成功！');
+        } else {
+          await createArticleWithAttachments(articleData, attachments);
+          toast.success('带附件的文章发布成功！');
+        }
+      } else {
+        if (formData.status === 'draft') {
+          await saveDraft(articleData);
+          toast.success('草稿保存成功！');
+        } else {
+          await createArticle(articleData);
+          toast.success('文章发布成功！');
+        }
+      }
+      
+      navigate('/admin/articles');
+    } catch (error) {
+      console.error('保存文章失败:', error);
+      toast.error('保存文章失败: ' + (error.response?.data?.message || error.message));
+    }
   };
 
   const handlePreview = () => {
@@ -193,17 +214,23 @@ const NewArticle = () => {
 
             <div>
               <label className="block text-sm font-medium mb-2">封面图片（可选）</label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleCoverImageChange}
-                  className="flex-1"
-                />
-                <Button type="button" variant="outline">
+              <div className="mt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('coverImageInput').click()}
+                  className="flex items-center"
+                >
                   <Upload className="w-4 h-4 mr-2" />
                   选择图片
                 </Button>
+                <Input
+                  id="coverImageInput"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCoverImageChange}
+                  className="hidden"
+                />
               </div>
               {coverImagePreview && (
                 <div className="mt-2">

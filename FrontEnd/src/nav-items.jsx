@@ -2,6 +2,7 @@ import { HomeIcon, FileText, LogIn, User, FileEdit, Plus } from "lucide-react";
 import Index from "./pages/Index.jsx";
 import Article from "./pages/Article.jsx";
 import Login from "./pages/Login.jsx";
+import Register from "./pages/Register.jsx";
 import About from "./pages/About.jsx";
 import AdminArticles from "./pages/AdminArticles.jsx";
 import NewArticle from "./pages/NewArticle.jsx";
@@ -27,6 +28,12 @@ export const navItems = [
     to: "/login",
     icon: <LogIn className="h-4 w-4" />,
     page: <Login />,
+  },
+  {
+    title: "注册",
+    to: "/register",
+    icon: <User className="h-4 w-4" />,
+    page: <Register />,
   },
   {
     title: "关于我",

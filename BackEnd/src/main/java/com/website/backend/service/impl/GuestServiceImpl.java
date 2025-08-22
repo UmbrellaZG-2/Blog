@@ -2,6 +2,7 @@ package com.website.backend.service.impl;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +15,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.website.backend.entity.Role;
-import com.website.backend.repository.RoleRepository;
+import com.website.backend.repository.jpa.RoleRepository;
 import com.website.backend.security.JwtTokenProvider;
 import com.website.backend.service.GuestService;
 import lombok.extern.slf4j.Slf4j;
@@ -53,8 +54,19 @@ public class GuestServiceImpl implements GuestService {
 		log.info("保存游客信息到Redis: {}", username);
 
 		// 获取游客角色
-		Role visitorRole = roleRepository.findByName("ROLE_VISITOR")
-			.orElseThrow(() -> new RuntimeException("游客角色不存在"));
+		log.info("开始查询ROLE_VISITOR角色");
+		Optional<Role> visitorRoleOptional = roleRepository.findByName("ROLE_VISITOR");
+		if (!visitorRoleOptional.isPresent()) {
+			log.warn("游客角色不存在，正在创建ROLE_VISITOR角色");
+			Role visitorRole = new Role();
+			visitorRole.setName("ROLE_VISITOR");
+			visitorRole = roleRepository.save(visitorRole);
+			log.info("已创建ROLE_VISITOR角色: {}", visitorRole.getName());
+			visitorRoleOptional = Optional.of(visitorRole);
+		} else {
+			log.info("成功查询到ROLE_VISITOR角色");
+		}
+		Role visitorRole = visitorRoleOptional.orElse(null);
 
 		// 创建游客信息Map
 		Map<String, Object> guestInfo = new HashMap<>();

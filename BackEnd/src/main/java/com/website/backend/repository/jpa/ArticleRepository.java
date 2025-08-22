@@ -1,5 +1,7 @@
-package com.website.backend.repository;
+package com.website.backend.repository.jpa;
 
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,5 +30,8 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 	// 获取所有不同的分类
 	@Query("SELECT DISTINCT a.category FROM Article a")
 	List<String> findDistinctCategories();
+
+	// 根据articleId查询文章
+	Optional<Article> findByArticleId(UUID articleId);
 
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getCategories, getTags, searchArticles } from '@/services/api';
+import { getArticleCategories, getAllTags, searchArticles } from '@/services/api';
 import ArticleList from '@/components/ArticleList';
 import SearchBar from '@/components/SearchBar';
 import CategoryNav from '@/components/CategoryNav';
@@ -25,13 +25,13 @@ const Index = () => {
   // 获取分类
   const { data: categories, isLoading: categoriesLoading, error: categoriesError } = useQuery({
     queryKey: ['categories'],
-    queryFn: getCategories,
+    queryFn: getArticleCategories,
   });
 
   // 获取标签
   const { data: tags, isLoading: tagsLoading, error: tagsError } = useQuery({
     queryKey: ['tags'],
-    queryFn: getTags,
+    queryFn: getAllTags,
   });
 
   const handleSearch = (params) => {

@@ -7,8 +7,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import com.website.backend.entity.Role;
-import com.website.backend.repository.UserRepository;
-import com.website.backend.repository.RoleRepository;
+import com.website.backend.repository.jpa.UserRepository;
+import com.website.backend.repository.jpa.RoleRepository;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.userdetails.User;
 import java.util.List;
@@ -57,7 +57,7 @@ public class RedisUserDetailsService implements UserDetailsService {
 	private RoleRepository roleRepository;
 
 	@Override
-	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		log.info("尝试加载用户: {}", maskUsername(username));
 
 		// 检查是否是游客用户

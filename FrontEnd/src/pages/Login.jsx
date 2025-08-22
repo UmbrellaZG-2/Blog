@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { User, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { login } from '@/services/api';
+import { login, guestLogin } from '@/services/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -76,9 +76,15 @@ const Login = () => {
             <Button 
               variant="outline" 
               className="w-full"
-              onClick={() => {
-                toast.info('以游客身份访问');
-                navigate('/');
+              onClick={async () => {
+                try {
+                  await guestLogin();
+                  toast.success('游客登录成功');
+                  navigate('/');
+                } catch (error) {
+                  toast.error(`游客登录失败: ${error.response?.data?.message || error.message}`);
+                  console.error('Guest login failed:', error);
+                }
               }}
             >
               以游客身份访问

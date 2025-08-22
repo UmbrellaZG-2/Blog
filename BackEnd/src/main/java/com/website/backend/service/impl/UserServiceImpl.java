@@ -7,8 +7,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.website.backend.entity.Role;
 import com.website.backend.entity.User;
-import com.website.backend.repository.RoleRepository;
-import com.website.backend.repository.UserRepository;
+import com.website.backend.repository.jpa.RoleRepository;
+import com.website.backend.repository.jpa.UserRepository;
 import com.website.backend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 

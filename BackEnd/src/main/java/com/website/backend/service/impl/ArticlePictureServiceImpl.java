@@ -3,7 +3,7 @@ package com.website.backend.service.impl;
 import lombok.extern.slf4j.Slf4j;
 import com.website.backend.entity.Article;
 import com.website.backend.entity.ArticlePicture;
-import com.website.backend.repository.ArticlePictureRepository;
+import com.website.backend.repository.jpa.ArticlePictureRepository;
 import com.website.backend.service.ArticlePictureService;
 import com.website.backend.config.FileStorageConfig;
 import org.springframework.util.StringUtils;

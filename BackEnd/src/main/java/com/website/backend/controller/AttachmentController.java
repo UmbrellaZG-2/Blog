@@ -2,27 +2,30 @@ package com.website.backend.controller;
 
 import com.website.backend.constant.HttpStatusConstants;
 import com.website.backend.entity.Attachment;
-import com.website.backend.repository.ArticleRepository;
-import com.website.backend.repository.AttachmentRepository;
-import com.website.backend.repository.ArticlePictureRepository;
+import com.website.backend.repository.jpa.ArticleRepository;
+import com.website.backend.repository.jpa.AttachmentRepository;
 import com.website.backend.service.AttachmentService;
-import com.website.backend.service.ArticlePictureService;
-import com.website.backend.util.DTOConverter;
 import com.website.backend.service.RateLimitService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
-@RequestMapping("/attachments")
+@RequestMapping("/api/attachments")
 public class AttachmentController {
 
 	private static final Logger logger = LoggerFactory.getLogger(AttachmentController.class);
@@ -34,22 +37,15 @@ public class AttachmentController {
 	private AttachmentRepository attachmentRepository;
 
 	@Autowired
-	private ArticlePictureRepository articlePictureRepository;
-
-	@Autowired
 	private AttachmentService attachmentService;
-
-	@Autowired
-	private ArticlePictureService articlePictureService;
-
-	@Autowired
-	private DTOConverter dtoConverter;
 
 	@Autowired
 	private RateLimitService rateLimitService;
 
-	// 下载附件接口 - 所有用户可访问
-	@GetMapping("/{attachmentId}")
+	/**
+	 * 下载附件接口 - 所有用户可访问
+	 */
+	@GetMapping("/download/{attachmentId}")
 	public void downloadAttachment(@PathVariable Long attachmentId, HttpServletRequest request,
 			HttpServletResponse response) {
 		// 获取客户端IP地址
@@ -110,6 +106,108 @@ public class AttachmentController {
 			return xForwardedForHeader.split(",")[0].trim();
 		}
 		return request.getRemoteAddr();
+	}
+
+	/**
+	 * 上传附件接口 - 管理员可访问
+	 */
+	@PreAuthorize("hasRole('ADMIN')")
+	@PostMapping("/upload")
+	public ResponseEntity<Map<String, Object>> uploadAttachment(@RequestParam("file") MultipartFile file,
+			@RequestParam("articleId") Long articleId) {
+		try {
+			// 根据articleId查询Article对象
+			com.website.backend.entity.Article article = articleRepo.findById(articleId)
+					.orElseThrow(() -> new RuntimeException("文章不存在"));
+			Attachment attachment = attachmentService.uploadAttachment(file, article);
+			Map<String, Object> response = new HashMap<>();
+			response.put("success", true);
+			response.put("message", "附件上传成功");
+			response.put("attachmentId", attachment.getAttachmentId());
+			response.put("fileName", attachment.getFileName());
+			return ResponseEntity.ok(response);
+		} catch (IOException e) {
+			logger.error("附件上传失败: {}", e.getMessage());
+			Map<String, Object> response = new HashMap<>();
+			response.put("success", false);
+			response.put("message", "附件上传失败: " + e.getMessage());
+			return ResponseEntity.status(HttpStatusConstants.INTERNAL_SERVER_ERROR).body(response);
+		} catch (Exception e) {
+			logger.error("附件上传异常: {}", e.getMessage());
+			Map<String, Object> response = new HashMap<>();
+			response.put("success", false);
+			response.put("message", "附件上传异常: " + e.getMessage());
+			return ResponseEntity.status(HttpStatusConstants.INTERNAL_SERVER_ERROR).body(response);
+		}
+	}
+
+	/**
+	 * 删除附件接口 - 管理员可访问
+	 */
+	@PreAuthorize("hasRole('ADMIN')")
+	@DeleteMapping("/delete/{attachmentId}")
+	public ResponseEntity<Map<String, String>> deleteAttachment(@PathVariable Long attachmentId) {
+		try {
+			attachmentService.deleteAttachment(attachmentId);
+			Map<String, String> response = new HashMap<>();
+			response.put("success", "true");
+			response.put("message", "附件删除成功");
+			return ResponseEntity.ok(response);
+		} catch (Exception e) {
+			logger.error("附件删除失败: {}", e.getMessage());
+			Map<String, String> response = new HashMap<>();
+			response.put("success", "false");
+			response.put("message", "附件删除失败: " + e.getMessage());
+			return ResponseEntity.status(HttpStatusConstants.INTERNAL_SERVER_ERROR).body(response);
+		}
+	}
+
+	/**
+	 * 获取文章附件列表接口
+	 */
+	@GetMapping("/article/get/{articleId}")
+	public ResponseEntity<Map<String, Object>> getAttachmentsByArticleId(@PathVariable Long articleId) {
+		try {
+			// 根据articleId查询Article对象
+			com.website.backend.entity.Article article = articleRepo.findById(articleId)
+					.orElseThrow(() -> new RuntimeException("文章不存在"));
+			// 使用attachmentRepository查询该文章的所有附件
+			List<Attachment> attachments = attachmentRepository.findByArticle(article);
+			Map<String, Object> response = new HashMap<>();
+			response.put("success", true);
+			response.put("message", "获取附件列表成功");
+			response.put("attachments", attachments);
+			return ResponseEntity.ok(response);
+		} catch (Exception e) {
+			logger.error("获取附件列表失败: {}", e.getMessage());
+			Map<String, Object> response = new HashMap<>();
+			response.put("success", false);
+			response.put("message", "获取附件列表失败: " + e.getMessage());
+			return ResponseEntity.status(HttpStatusConstants.INTERNAL_SERVER_ERROR).body(response);
+		}
+	}
+
+	/**
+	 * 获取所有附件列表接口 - 管理员可访问
+	 */
+	@PreAuthorize("hasRole('ADMIN')")
+	@GetMapping("/get")
+	public ResponseEntity<Map<String, Object>> getAllAttachments() {
+		try {
+			// 使用attachmentRepository查询所有附件
+			List<Attachment> attachments = attachmentRepository.findAll();
+			Map<String, Object> response = new HashMap<>();
+			response.put("success", true);
+			response.put("message", "获取所有附件成功");
+			response.put("attachments", attachments);
+			return ResponseEntity.ok(response);
+		} catch (Exception e) {
+			logger.error("获取所有附件失败: {}", e.getMessage());
+			Map<String, Object> response = new HashMap<>();
+			response.put("success", false);
+			response.put("message", "获取所有附件失败: " + e.getMessage());
+			return ResponseEntity.status(HttpStatusConstants.INTERNAL_SERVER_ERROR).body(response);
+		}
 	}
 
 }

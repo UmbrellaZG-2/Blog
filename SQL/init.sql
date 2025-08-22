@@ -57,7 +57,7 @@ CREATE TABLE `user_roles` (
 -- ========================================
 CREATE TABLE `articles` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-    `article_id` BIGINT NOT NULL UNIQUE COMMENT '文章编号，用于业务标识',
+    `article_id` VARCHAR(36) NOT NULL UNIQUE COMMENT '文章编号，用于业务标识，UUID格式',
     `title` VARCHAR(100) COMMENT '文章标题',
     `content` LONGTEXT COMMENT '文章内容',
     `category` VARCHAR(50) COMMENT '文章分类',

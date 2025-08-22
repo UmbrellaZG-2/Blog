@@ -1,5 +1,6 @@
 package com.website.backend.service;
 
+import java.util.UUID;
 import com.website.backend.entity.Article;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,11 +24,11 @@ public interface ArticleService {
 	Page<Article> getArticlesByCategory(String category, Pageable pageable);
 
 	/**
-	 * 根据ID获取文章
-	 * @param id 文章ID
+	 * 根据articleId获取文章
+	 * @param articleId 文章ID
 	 * @return 文章详情
 	 */
-	Article getArticleById(Long id);
+	Article getArticleById(UUID articleId);
 
 	/**
 	 * 创建新文章
@@ -43,8 +44,8 @@ public interface ArticleService {
 
 	/**
 	 * 更新文章
-	 * @param id 文章ID
-	 * @param title 文章标题
+	 * @param articleId 文章ID
+	 * @param title 文章标题 
 	 * @param category 文章分类
 	 * @param content 文章内容
 	 * @param deleteAttachment 是否删除附件
@@ -53,13 +54,13 @@ public interface ArticleService {
 	 * @param picture 新封面图片
 	 * @return 更新后的文章
 	 */
-	Article updateArticle(Long id, String title, String category, String content, boolean deleteAttachment,
+	Article updateArticle(UUID articleId, String title, String category, String content, boolean deleteAttachment,
 			boolean deletePicture, MultipartFile attachment, MultipartFile picture);
 
 	/**
 	 * 删除文章
-	 * @param id 文章ID
+	 * @param articleId 文章ID
 	 */
-	void deleteArticle(Long id);
+	void deleteArticle(UUID articleId);
 
 }

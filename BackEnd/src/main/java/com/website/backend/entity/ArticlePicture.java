@@ -31,7 +31,18 @@ public class ArticlePicture {
 	@JoinColumn(name = "article_id", nullable = false)
 	private Article article;
 
+	@Column(name = "is_cover", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+	private Boolean isCover = false;
+
 	public ArticlePicture() {
+	}
+
+	public Boolean getIsCover() {
+		return isCover;
+	}
+
+	public void setIsCover(Boolean isCover) {
+		this.isCover = isCover;
 	}
 
 }

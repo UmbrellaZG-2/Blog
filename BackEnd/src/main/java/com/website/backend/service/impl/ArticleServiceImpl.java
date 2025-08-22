@@ -1,8 +1,9 @@
 package com.website.backend.service.impl;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.website.backend.entity.Article;
-import com.website.backend.repository.ArticleRepository;
+import com.website.backend.repository.jpa.ArticleRepository;
 import com.website.backend.service.ArticleService;
 import com.website.backend.service.AttachmentService;
 import com.website.backend.service.ArticlePictureService;
@@ -20,9 +21,10 @@ import java.util.UUID;
 /**
  * ArticleService接口的实现类 提供文章的CRUD操作及相关业务逻辑
  */
-@Slf4j
 @Service
 public class ArticleServiceImpl implements ArticleService {
+
+	private static final Logger log = LoggerFactory.getLogger(ArticleServiceImpl.class);
 
 	private final ArticleRepository articleRepository;
 
@@ -73,9 +75,9 @@ public class ArticleServiceImpl implements ArticleService {
 	 * @throws ResourceNotFoundException 当文章不存在时抛出
 	 */
 	@Override
-	public Article getArticleById(Long id) {
-		log.info("获取文章，ID: {}", id);
-		return articleRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("文章不存在，ID: " + id));
+	public Article getArticleById(UUID articleId) {
+		log.info("获取文章，articleId: {}", articleId);
+		return articleRepository.findByArticleId(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在，articleId: " + articleId));
 	}
 
 	/**
@@ -105,19 +107,11 @@ public class ArticleServiceImpl implements ArticleService {
 		}
 
 		// 创建文章
-		Article article = new Article();
-		article.setTitle(title);
-		article.setCategory(category);
-		article.setContent(content);
-		article.setCreateTime(LocalDateTime.now());
-        article.setUpdateTime(LocalDateTime.now());
+		Article article = new Article(title, content, category);
 
 		// 保存文章
 		Article savedArticle = articleRepository.save(article);
-		// 设置文章业务标识ID与主键ID相同
-		savedArticle.setArticleId(savedArticle.getId());
-		savedArticle = articleRepository.save(savedArticle);
-		log.info("文章保存成功，ID: {}, 业务标识: {}", savedArticle.getId(), savedArticle.getArticleId());
+		log.info("文章保存成功，ID: {}, articleId: {}", savedArticle.getId(), savedArticle.getArticleId());
 
 		// 处理附件
 		if (attachment != null && !attachment.isEmpty()) {
@@ -167,12 +161,12 @@ public class ArticleServiceImpl implements ArticleService {
 	 * @throws FileUploadException 当文件上传失败时抛出
 	 */
 	@Override
-	public Article updateArticle(Long id, String title, String category, String content, boolean deleteAttachment,
+	public Article updateArticle(UUID articleId, String title, String category, String content, boolean deleteAttachment,
 			boolean deletePicture, MultipartFile attachment, MultipartFile picture) {
-		log.info("更新文章，ID: {}", id);
+		log.info("更新文章，articleId: {}", articleId);
 
 		// 查找文章
-		Article article = getArticleById(id);
+		Article article = getArticleById(articleId);
 
 		// 更新文章信息
 		if (title != null && !title.trim().isEmpty()) {
@@ -246,11 +240,11 @@ public class ArticleServiceImpl implements ArticleService {
 	 * @throws ResourceNotFoundException 当文章不存在时抛出
 	 */
 	@Override
-	public void deleteArticle(Long id) {
-		log.info("删除文章，ID: {}", id);
+	public void deleteArticle(UUID articleId) {
+		log.info("删除文章，articleId: {}", articleId);
 
 		// 查找文章
-		Article article = getArticleById(id);
+		Article article = getArticleById(articleId);
 
 		// 删除相关附件
 		if (article.isHasAttachment()) {
@@ -266,7 +260,7 @@ public class ArticleServiceImpl implements ArticleService {
 
 		// 删除文章
 		articleRepository.delete(article);
-		log.info("文章删除成功，ID: {}", id);
+		log.info("文章删除成功，articleId: {}", articleId);
 	}
 
 }

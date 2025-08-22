@@ -4,13 +4,14 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * 文章实体类，对应文章表
  */
 @Table(name = "articles")
-@Entity
 @Data
+@Entity
 public class Article {
 
 	/** 主键ID */
@@ -20,8 +21,8 @@ public class Article {
 	private Long id;
 
 	/** 文章编号，用于业务标识 */
-	@Column(name = "article_id", nullable = false, unique = true)
-	private Long articleId;
+	@Column(name = "article_id", nullable = false, unique = true, updatable = false)
+	private UUID articleId;
 
 	/** 文章标题 */
 	@Column(length = 100)
@@ -43,6 +44,10 @@ public class Article {
 	@Column(name = "add_picture")
 	private boolean hasCoverImage = false;
 
+	/** 是否为草稿 */
+	@Column(name = "is_draft")
+	private boolean isDraft = false;
+
 	/** 创建时间 */
 	private LocalDateTime createTime;
 
@@ -50,6 +55,19 @@ public class Article {
 	private LocalDateTime updateTime;
 
 	public Article() {
+		this.articleId = UUID.randomUUID();
+	}
+
+	/**
+	 * 全参构造函数
+	 */
+	public Article(String title, String content, String category) {
+		this.articleId = UUID.randomUUID();
+		this.title = title;
+		this.content = content;
+		this.category = category;
+		this.createTime = LocalDateTime.now();
+		this.updateTime = LocalDateTime.now();
 	}
 
 	/**
@@ -68,5 +86,4 @@ public class Article {
 	protected void onUpdate() {
 		updateTime = LocalDateTime.now();
 	}
-
 }

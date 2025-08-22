@@ -1,4 +1,4 @@
-package com.website.backend.repository;
+package com.website.backend.repository.jpa;
 
 import com.website.backend.entity.Attachment;
 import com.website.backend.entity.Article;

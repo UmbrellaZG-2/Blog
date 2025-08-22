@@ -1,34 +1,59 @@
-# UmbrellaZG 项目文档
 
-## 项目介绍
-这是一个前后端分离的项目，后端使用Spring Boot框架，前端使用React框架。本项目支持用户登录、文章管理、标签管理等功能。
-（后端自己弄的，前端来自美团的nocode）
-## 技术栈
-- 后端：Spring Boot 3.4.5, Java 17, Spring Data JPA, Spring Security, MySQL, Redis
-- 前端：React 18.2.0, Vite 5.4.11, Axios, Tailwind CSS
+| 方法 | 路径 | 功能描述 | 访问权限 |
+|------|------|----------|----------|
+| GET | `/articles` | 获取文章列表 | 公开 |
+| GET | `/articles/search` | 根据文章标题搜索文章 | 公开 |
+| POST | `/articles/create` | 创建文章 | 管理员 |
+| PUT | `/articles/update/{id}` | 更新文章 | 管理员 |
+| DELETE | `/articles/delete/{id}` | 删除文章 | 管理员 |
+| GET | `/articles/get/{id}` | 获取文章详情 | 公开 |
+| GET | `/articles/category/get/{category}` | 获取分类下的文章 | 公开 |
+| POST | `/articles/{articleId}/comments/put` | 添加评论 | 公开 |
+| GET | `/articles/{articleId}/comments/get` | 获取文章的所有评论 | 公开 |
+| GET | `/articles/categories/get` | 获取所有分类 | 公开 |
+| POST | `/articles/{articleId}/tags/put` | 为文章添加标签 | 管理员 |
+| DELETE | `/articles/{articleId}/tags/delete/{tagName}` | 删除文章的标签 | 管理员 |
 
-## 项目结构
-```
-WebZG/
-├── BackEnd/        # 后端Spring Boot项目
-├── FrontEnd/       # 前端React项目
-└── SQL/            # 数据库脚本
-```
+### 2. AttachmentController
+处理附件相关的 API 请求
 
-## 本地开发启动步骤
-请注意，所有application.yaml文件需要你自己准备，我的硬编码了，我就不提供了。
+| 方法 | 路径 | 功能描述 | 访问权限 |
+|------|------|----------|----------|
+| GET | `/attachments/download/{attachmentId}` | 下载附件 | 公开 |
+| POST | `/attachments/upload` | 上传附件 | 管理员 |
+| DELETE | `/attachments/delete/{attachmentId}` | 删除附件 | 管理员 |
+| GET | `/attachments/article/get/{articleId}` | 获取文章附件列表 | 公开 |
+| GET | `/attachments/get` | 获取所有附件列表 | 管理员 |
 
-### 后端启动
-1. 确保已安装JDK 17和Maven
-2. 导入数据库脚本：`SQL/init.sql`
-3. 修改数据库配置：`BackEnd/src/main/resources/application-prod.properties`
-4. 进入后端目录：`cd BackEnd`
-5. 启动后端服务：`mvn spring-boot:run`
-   - 后端服务将运行在 http://localhost:8081/api
+### 3. AuthController
+处理认证相关的 API 请求
 
-### 前端启动
-1. 确保已安装Node.js和npm
-2. 进入前端目录：`cd FrontEnd`
-3. 安装依赖：`npm install`
-4. 启动前端服务：`npm run dev`
-   - 前端服务将运行在 http://localhost:8080
+| 方法 | 路径 | 功能描述 | 访问权限 |
+|------|------|----------|----------|
+| GET | `/auth/get` | 获取认证信息 | 公开 |
+| POST | `/auth/login` | 用户登录 | 公开 |
+| POST | `/auth/admin/login` | 管理员登录 | 公开 |
+| POST | `/auth/admin/register` | 管理员注册 | 隐藏（前端不提供调用） |
+| POST | `/api/auth/guest/login` | 游客登录(POST) | 公开 |
+| GET | `/api/auth/guest/login` | 游客登录(GET) | 公开 |
+| POST | `/api/auth/register/send-code` | 发送验证码 | 隐藏 |
+| POST | `/api/auth/register/verify` | 验证验证码并注册 | 隐藏 |
+
+### 4. HomeController
+处理首页相关的 API 请求
+
+| 方法 | 路径 | 功能描述 | 访问权限 |
+|------|------|----------|----------|
+| GET | `/home` | 首页接口 | 公开 |
+| GET | `/home/redirect/aboutMe` | 跳转到关于我页面 | 公开 |
+| GET | `/home/aboutMe` | 关于我接口 | 公开 |
+
+### 5. ImageController
+处理图片相关的 API 请求
+
+| 方法 | 路径 | 功能描述 | 访问权限 |
+|------|------|----------|----------|
+| POST | `/images/article/{articleId}/cover/update` | 上传文章封面图片 | 管理员 |
+| DELETE | `/images/article/{articleId}/cover/delete` | 删除文章封面图片 | 管理员 |
+| GET | `/images/article/{articleId}/cover/get` | 获取文章封面图片 | 公开 |
+| GET | `/images/article/{articleId}/getAll` | 获取文章的所有图片 | 公开 |
