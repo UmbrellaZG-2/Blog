@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -20,9 +21,10 @@ import java.io.IOException;
 /**
  * JWT异常处理过滤器，用于处理JwtAuthenticationFilter中抛出的异常
  */
+@Component
 public class JwtExceptionHandlerFilter extends OncePerRequestFilter implements Ordered {
 
-    private static final int FILTER_ORDER = 98; // 在JwtAuthenticationFilter之前执行
+    private static final int FILTER_ORDER = Ordered.LOWEST_PRECEDENCE; // 在JwtAuthenticationFilter之后执行
 
     @Override
     public int getOrder() {

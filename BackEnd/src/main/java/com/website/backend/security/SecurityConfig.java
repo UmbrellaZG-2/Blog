@@ -1,5 +1,4 @@
-package com.website.backend.config;
-
+package com.website.backend.security;
 
 
 import java.io.IOException;
@@ -30,14 +29,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.website.backend.security.JwtAuthenticationFilter;
-import com.website.backend.security.JwtTokenProvider;
 import com.website.backend.service.impl.RedisUserDetailsService;
 
 import io.micrometer.common.lang.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.website.backend.security.JwtExceptionHandlerFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -74,23 +70,15 @@ public class SecurityConfig {
 		return authConfig.getAuthenticationManager();
 	}
 
-	@Autowired
-	private JwtTokenProvider jwtTokenProvider;
-
 	@Bean
-	public JwtAuthenticationFilter jwtAuthenticationFilter() {
-		return new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService());
-	}
-
-	@Bean
-	public JwtExceptionHandlerFilter jwtExceptionHandlerFilter(ObjectMapper objectMapper) {
-		return new JwtExceptionHandlerFilter(objectMapper);
+	public ObjectMapper objectMapper() {
+		return new ObjectMapper();
 	}
 
 	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOrigins(List.of("http://101.200.43.186:8082", "http://101.200.43.186:8083", "http://localhost:8082", "http://localhost:8083"));
+		configuration.setAllowedOrigins(List.of("http://101.200.43.186:8082", "http://101.200.43.186:8083", "http://localhost:8082"));
 		configuration.addAllowedMethod("*");
 		configuration.addAllowedHeader("*");
 		configuration.setAllowCredentials(true);
@@ -102,56 +90,56 @@ public class SecurityConfig {
 	}
 
 	@Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                // 公开访问的API
-                .requestMatchers("/api/articles").permitAll()
-                .requestMatchers("/api/articles/*").permitAll()
-                .requestMatchers("/api/attachments/download").permitAll()
-                .requestMatchers("/api/attachments/download/*").permitAll()
-                .requestMatchers("/api/attachments/article/get").permitAll()
-                .requestMatchers("/api/attachments/article/get/*").permitAll()
-                .requestMatchers("/api/auth/get").permitAll()
-                .requestMatchers("/api/auth/login").permitAll()
-                .requestMatchers("/api/auth/admin/login").permitAll()
-                .requestMatchers("/api/auth/guest/login").permitAll()
-                .requestMatchers("/api/auth/admin/register").permitAll()
-                .requestMatchers("/api/home").permitAll()
-                .requestMatchers("/api/home/*").permitAll()
-                .requestMatchers("/api/images/article/*/cover/get").permitAll()
-                .requestMatchers("/api/images/article/*/getAll").permitAll()
-                .requestMatchers("/api/tags").permitAll()
-                .requestMatchers("/api/tags/*").permitAll()
-                .requestMatchers("/api/articles/categories/get").permitAll()
-                .requestMatchers("/api/test/get").permitAll()
-                .requestMatchers("/api/test/post").permitAll()
-                
-                // 管理员访问的API
-                .requestMatchers("/api/articles/create").hasRole("ADMIN")
-                .requestMatchers("/api/articles/update/*").hasRole("ADMIN")
-                .requestMatchers("/api/articles/delete/*").hasRole("ADMIN")
-                .requestMatchers("/api/articles/*/tags").hasRole("ADMIN")
-                .requestMatchers("/api/articles/*/tags/*").hasRole("ADMIN")
-                .requestMatchers("/api/attachments/upload").hasRole("ADMIN")
-                .requestMatchers("/api/attachments/delete/*").hasRole("ADMIN")
-                .requestMatchers("/api/attachments/get").hasRole("ADMIN")
-                .requestMatchers("/api/images/article/*/cover/update").hasRole("ADMIN")
-                .requestMatchers("/api/images/article/*/cover/delete").hasRole("ADMIN")
-                
-                // 隐藏API（不应该被外部直接访问）
-                .requestMatchers("/api/auth/register/send-code").denyAll()
-                .requestMatchers("/api/auth/register/verify").denyAll()
-                
-                // 其他所有请求需要认证
-                .anyRequest().authenticated()
-            )
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
-        
-        return http.build();
-    }
+	public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+		http
+			.csrf(csrf -> csrf.disable())
+			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+			.authorizeHttpRequests(auth -> auth
+				// 公开访问的API - 确保精确匹配优先
+				.requestMatchers(HttpMethod.GET, "/api/articles").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/articles/*").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/articles/search").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/articles/get/*").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/articles/category/get/*").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/articles/*/comments/get").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/articles/*/comments/put").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/articles/categories/get").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/home").permitAll()
+				.requestMatchers("/api/home/**").permitAll()
+				.requestMatchers("/api/auth/get").permitAll()
+				.requestMatchers("/api/auth/login").permitAll()
+				.requestMatchers("/api/auth/admin/login").permitAll()
+				.requestMatchers("/api/auth/guest/login").permitAll()
+				.requestMatchers("/api/auth/admin/register").permitAll()
+				.requestMatchers("/api/attachments/download").permitAll()
+				.requestMatchers("/api/attachments/download/*").permitAll()
+				.requestMatchers("/api/attachments/article/get").permitAll()
+				.requestMatchers("/api/attachments/article/get/*").permitAll()
+				.requestMatchers("/api/images/article/*/cover/get").permitAll()
+				.requestMatchers("/api/images/article/*/getAll").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/tags").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/tags/*").permitAll()
+				.requestMatchers("/api/test/get").permitAll()
+				.requestMatchers("/api/test/post").permitAll()
+				// 添加公开的POST请求
+				.requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/auth/admin/login").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/auth/guest/login").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/articles/*/comments/put").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/attachments/upload").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/images/article/*/cover/update").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/test/post").permitAll()
+				// 隐藏API（不应该被外部直接访问）
+				.requestMatchers("/api/auth/register/send-code").denyAll()
+				.requestMatchers("/api/auth/register/verify").denyAll()
+				// 确保所有其他请求需要认证
+				.anyRequest().authenticated()
+			)
+			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+		
+		return http.build();
+	}
 
 	/**
 	 * 请求日志过滤器，用于记录请求详细信息
@@ -195,10 +183,10 @@ public class SecurityConfig {
 				
 				log.info("请求IP: {}", wrappedRequest.getRemoteAddr());
 
-				// 继续过滤链
-				filterChain.doFilter(wrappedRequest, response);
+				// 继续过滤链，使用原始请求
+				filterChain.doFilter(request, response);
 
-				log.info("请求处理完成: {} {}，状态码: {}", wrappedRequest.getMethod(), wrappedRequest.getRequestURI(), response.getStatus());
+				log.info("请求处理完成: {} {}，状态码: {}", request.getMethod(), request.getRequestURI(), response.getStatus());
 			}
 		};
 	}
