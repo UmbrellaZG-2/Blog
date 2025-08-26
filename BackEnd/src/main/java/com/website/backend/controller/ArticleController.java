@@ -67,6 +67,7 @@ public class ArticleController {
      * 获取文章列表
      */
     @GetMapping
+    @PreAuthorize("permitAll()")
     public ApiResponse<ArticleListDTO> articles(@RequestParam(defaultValue = "0") int page,
                                                @RequestParam(defaultValue = "10") int size) {
 

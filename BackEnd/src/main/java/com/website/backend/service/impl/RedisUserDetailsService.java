@@ -1,6 +1,8 @@
 package com.website.backend.service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -17,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class RedisUserDetailsService implements UserDetailsService {
 
 	private static final String GUEST_PREFIX = "guest_";
@@ -69,7 +72,7 @@ public class RedisUserDetailsService implements UserDetailsService {
 			log.info("用户 {} 是普通用户，尝试从数据库加载", maskUsername(username));
 			return loadRegularUserFromDatabase(username);
 		}
-	}
+    }
 
 	private UserDetails loadGuestUserFromRedis(String username) {
 		String redisKey = REDIS_KEY_PREFIX + username;
@@ -90,7 +93,7 @@ public class RedisUserDetailsService implements UserDetailsService {
 
 		log.info("成功从Redis加载游客 {}", maskUsername(username));
 		return new User(username, password, authorities);
-	}
+    }
 
 	private UserDetails loadRegularUserFromDatabase(String username) {
 		com.website.backend.entity.User user = userRepository.findByUsername(username)
