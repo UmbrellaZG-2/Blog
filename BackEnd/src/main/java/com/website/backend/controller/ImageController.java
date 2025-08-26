@@ -38,8 +38,8 @@ public class ImageController {
     /**
      * 上传文章封面图片
      */
-    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/article/{articleId}/cover/update")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<String> uploadArticleCover(@PathVariable Long articleId, @RequestParam MultipartFile file) {
 
         try {
@@ -70,8 +70,8 @@ public class ImageController {
     /**
      * 删除文章封面图片
      */
-    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/article/{articleId}/cover/delete")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<String> deleteArticleCover(@PathVariable Long articleId) {
 
         try {

@@ -34,7 +34,7 @@ const plugins = isProdEnv
 export default defineConfig({
   server: {
     host: '::',
-    port: '8080',
+    port: '8082',
     hmr: {
       overlay: false,
     },

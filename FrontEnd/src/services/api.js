@@ -34,49 +34,74 @@ api.interceptors.response.use(
 );
 
 // API端点 - 文章相关
-export const getArticles = async (params) => {
-  return api.get('/articles', { params });
+export const getArticles = async (params = {}) => {
+  // 确保参数是基本类型而不是对象
+  const queryParams = {};
+  if (params.page !== undefined) queryParams.page = params.page;
+  if (params.size !== undefined) queryParams.size = params.size;
+  
+  return api.get('/api/articles', { params: queryParams });
 };
 
-export const searchArticles = async (keyword) => {
-  return api.get('/articles/search', { params: { keyword } });
+export const searchArticles = async (keyword, page = 0, size = 10) => {
+  return api.get('/api/articles/search', { 
+    params: { 
+      keyword: keyword || '',
+      page,
+      size
+    } 
+  });
+};
+
+/**
+ * 使用POST方式搜索文章，避免URL中出现复杂对象
+ * @param {Object} searchParams - 搜索参数对象
+ * @returns {Promise} Axios请求结果
+ */
+export const searchArticlesByDTO = async (searchParams) => {
+  return api.post('/api/articles/search', searchParams);
 };
 
 export const getArticleById = async (id) => {
-  return api.get(`/articles/get/${id}`);
+  return api.get(`/api/articles/get/${id}`);
 };
 
 export const createArticle = async (articleData) => {
-  return api.post('/articles/create', articleData);
+  return api.post('/api/articles/create', articleData);
 };
 
 export const updateArticle = async (id, articleData) => {
-  return api.put(`/articles/update/${id}`, articleData);
+  return api.put(`/api/articles/update/${id}`, articleData);
 };
 
 export const deleteArticle = async (id) => {
-  return api.delete(`/articles/delete/${id}`);
+  return api.delete(`/api/articles/delete/${id}`);
 };
 
-export const getArticlesByCategory = async (category) => {
-  return api.get(`/articles/category/get/${category}`);
+export const getArticlesByCategory = async (category, page = 0, size = 10) => {
+  return api.get(`/api/articles/category/get/${category}`, {
+    params: {
+      page,
+      size
+    }
+    });
 };
 
 // API端点 - 附件相关
 export const getAttachments = async (articleId) => {
-  return api.get(`/attachments/article/get/${articleId}`);
+  return api.get(`/api/attachments/article/get/${articleId}`);
 };
 
 export const downloadAttachment = async (attachmentId) => {
   // 返回文件blob
-  const response = await api.get(`/attachments/download/${attachmentId}`, {
+  const response = await api.get(`/api/attachments/download/${attachmentId}`, {
     responseType: 'blob'
   });
   return response.data;
 };
 
 export const uploadAttachment = async (formData) => {
-  return api.post('/attachments/upload', formData, {
+  return api.post('/api/attachments/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
@@ -84,26 +109,26 @@ export const uploadAttachment = async (formData) => {
 };
 
 export const deleteAttachment = async (attachmentId) => {
-  return api.delete(`/attachments/delete/${attachmentId}`);
+  return api.delete(`/api/attachments/delete/${attachmentId}`);
 };
 
 // API端点 - 分类和标签相关
 export const getCategories = async () => {
-  return api.get('/articles/categories/get');
+  return api.get('/api/articles/categories/get');
 };
 
 export const getTags = async () => {
   // 假设后端有获取标签的接口
-  return api.get('/tags/get');
+  return api.get('/api/tags/get');
 };
 
 // API端点 - 认证相关
 export const login = async (credentials) => {
-  return api.post('/auth/login', credentials);
+  return api.post('/api/auth/login', credentials);
 };
 
 export const adminLogin = async (credentials) => {
-  return api.post('/auth/admin/login', credentials);
+  return api.post('/api/auth/admin/login', credentials);
 };
 
 export const guestLogin = async () => {
@@ -118,18 +143,18 @@ export const guestLogin = async () => {
 
 // API端点 - 评论相关
 export const addComment = async (articleId, commentData) => {
-  return api.post(`/articles/${articleId}/comments/put`, commentData);
+  return api.post(`/api/articles/${articleId}/comments/put`, commentData);
 };
 
 export const getComments = async (articleId) => {
-  return api.get(`/articles/${articleId}/comments/get`);
+  return api.get(`/api/articles/${articleId}/comments/get`);
 };
 
 // API端点 - 图片相关
 export const uploadCoverImage = async (articleId, imageFile) => {
   const formData = new FormData();
   formData.append('image', imageFile);
-  return api.post(`/images/article/${articleId}/cover/update`, formData, {
+  return api.post(`/api/images/article/${articleId}/cover/update`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
@@ -137,11 +162,11 @@ export const uploadCoverImage = async (articleId, imageFile) => {
 };
 
 export const getCoverImage = async (articleId) => {
-  return api.get(`/images/article/${articleId}/cover/get`);
+  return api.get(`/api/images/article/${articleId}/cover/get`);
 };
 
 export const deleteCoverImage = async (articleId) => {
-  return api.delete(`/images/article/${articleId}/cover/delete`);
+  return api.delete(`/api/images/article/${articleId}/cover/delete`);
 };
 
 export default api;

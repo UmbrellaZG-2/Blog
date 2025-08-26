@@ -18,13 +18,13 @@ const Index = () => {
   // 获取所有文章
   const { data: allArticles, isLoading: allArticlesLoading, error: allArticlesError } = useQuery({
     queryKey: ['articles'],
-    queryFn: getArticles,
+    queryFn: () => getArticles({ page: 0, size: 10 }),
   });
 
   // 搜索文章
   const { data: searchResults, isLoading: searchLoading, error: searchError } = useQuery({
     queryKey: ['search', searchParams],
-    queryFn: () => searchArticles(searchParams?.keyword),
+    queryFn: () => searchArticles(searchParams?.keyword, 0, 10),
     enabled: !!searchParams?.keyword, // 只有当搜索关键词存在时才执行查询
   });
 
@@ -50,8 +50,8 @@ const Index = () => {
 
   // 确定显示的文章列表
   const displayArticles = searchParams?.keyword 
-    ? (searchResults?.data || []) 
-    : (allArticles?.data || []);
+    ? (searchResults?.data?.articles || []) 
+    : (allArticles?.data?.articles || []);
 
   const displayArticlesLoading = searchParams?.keyword 
     ? searchLoading 

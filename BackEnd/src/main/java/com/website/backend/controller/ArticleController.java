@@ -2,7 +2,6 @@ package com.website.backend.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.website.backend.constant.HttpStatusConstants;
 import com.website.backend.entity.Article;
@@ -16,6 +15,7 @@ import com.website.backend.repository.jpa.ArticleTagRepository;
 import com.website.backend.DTO.ArticleDTO;
 import com.website.backend.DTO.ArticleListDTO;
 import com.website.backend.DTO.DeleteArticleResponseDTO;
+import com.website.backend.DTO.ArticleSearchDTO;
 import com.website.backend.util.DTOConverter;
 import com.website.backend.exception.ResourceNotFoundException;
 
@@ -24,6 +24,7 @@ import java.util.*;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/articles")
@@ -67,7 +68,6 @@ public class ArticleController {
      * 获取文章列表
      */
     @GetMapping
-    @PreAuthorize("permitAll()")
     public ApiResponse<ArticleListDTO> articles(@RequestParam(defaultValue = "0") int page,
                                                @RequestParam(defaultValue = "10") int size) {
 
@@ -92,12 +92,23 @@ public class ArticleController {
         ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
         return ApiResponse.success(articleListDTO);
     }
+    
+    /**
+     * 根据文章搜索参数DTO搜索文章（POST方式）
+     */
+    @PostMapping("/search")
+    public ApiResponse<ArticleListDTO> searchArticlesByDTO(@RequestBody ArticleSearchDTO searchDTO) {
+        Pageable pageable = PageRequest.of(searchDTO.getPage(), searchDTO.getSize());
+        Page<Article> articlePage = articleRepo.findByTitleContaining(searchDTO.getKeyword(), pageable);
+        ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
+        return ApiResponse.success(articleListDTO);
+    }
 
     /**
      * 创建文章（管理员专用）
      */
-    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ArticleDTO> createArticle(@RequestParam String title, @RequestParam String category,
                                                 @RequestParam String content, @RequestParam(defaultValue = "false") boolean isDraft) {
 
@@ -126,8 +137,8 @@ public class ArticleController {
     /**
      * 更新文章（管理员专用）
      */
-    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/update/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ArticleDTO> updateArticle(@PathVariable Long id, @RequestParam String title,
                                                 @RequestParam String category, @RequestParam String content,
                                                 @RequestParam(defaultValue = "false") boolean isDraft) {
@@ -154,8 +165,8 @@ public class ArticleController {
     /**
      * 删除文章（管理员专用）
      */
-    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/delete/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<DeleteArticleResponseDTO> deleteArticle(@PathVariable Long id) {
 
         Article article = articleRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
@@ -240,8 +251,8 @@ public class ArticleController {
     /**
      * 为文章添加标签
      */
-    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{articleId}/tags/put")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<List<String>> addArticleTags(@PathVariable Long articleId, @RequestBody List<String> tagNames) {
 
         Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
@@ -262,8 +273,8 @@ public class ArticleController {
     /**
      * 删除文章的标签
      */
-    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{articleId}/tags/delete/{tagName}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<String> deleteArticleTag(@PathVariable Long articleId, @PathVariable String tagName) {
 
         Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));

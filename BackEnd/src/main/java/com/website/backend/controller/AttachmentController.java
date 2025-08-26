@@ -111,8 +111,8 @@ public class AttachmentController {
 	/**
 	 * 上传附件接口 - 管理员可访问
 	 */
-	@PreAuthorize("hasRole('ADMIN')")
 	@PostMapping("/upload")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<Map<String, Object>> uploadAttachment(@RequestParam("file") MultipartFile file,
 			@RequestParam("articleId") Long articleId) {
 		try {
@@ -144,8 +144,8 @@ public class AttachmentController {
 	/**
 	 * 删除附件接口 - 管理员可访问
 	 */
-	@PreAuthorize("hasRole('ADMIN')")
 	@DeleteMapping("/delete/{attachmentId}")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<Map<String, String>> deleteAttachment(@PathVariable Long attachmentId) {
 		try {
 			attachmentService.deleteAttachment(attachmentId);
@@ -190,8 +190,8 @@ public class AttachmentController {
 	/**
 	 * 获取所有附件列表接口 - 管理员可访问
 	 */
-	@PreAuthorize("hasRole('ADMIN')")
 	@GetMapping("/get")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<Map<String, Object>> getAllAttachments() {
 		try {
 			// 使用attachmentRepository查询所有附件

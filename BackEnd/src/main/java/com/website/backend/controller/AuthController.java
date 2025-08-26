@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -13,21 +12,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.website.backend.entity.User;
-import com.website.backend.exception.ResourceNotFoundException;
-import com.website.backend.security.JwtTokenProvider;
 import com.website.backend.service.GuestService;
 import com.website.backend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import java.util.concurrent.TimeUnit;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 @Slf4j
 @RestController
@@ -45,10 +37,6 @@ public ResponseEntity<?> getAuthInfo() {
 		return ResponseEntity.ok(response);
 	}
 
-	private final AuthenticationManager authenticationManager;
-
-	private final JwtTokenProvider jwtTokenProvider;
-
 	private final GuestService guestService;
 
 	@Autowired
@@ -60,16 +48,10 @@ public ResponseEntity<?> getAuthInfo() {
 	@Autowired
 	private UserDetailsService userDetailsService;
 
-	@Autowired
-	private PasswordEncoder passwordEncoder;
-
 	/**
 	 * 构造函数注入依赖
 	 */
-	public AuthController(AuthenticationManager authenticationManager, JwtTokenProvider jwtTokenProvider,
-			GuestService guestService) {
-		this.authenticationManager = authenticationManager;
-		this.jwtTokenProvider = jwtTokenProvider;
+	public AuthController(GuestService guestService) {
 		this.guestService = guestService;
 	}
 
@@ -80,7 +62,7 @@ public ResponseEntity<?> getAuthInfo() {
 	public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
 		String username = request.get("username");
 		String password = request.get("password");
-
+		
 		if (username == null || username.isEmpty() || password == null || password.isEmpty()) {
 			return ResponseEntity.badRequest().body("用户名和密码不能为空");
 		}
@@ -88,20 +70,9 @@ public ResponseEntity<?> getAuthInfo() {
 		try {
 			// 验证用户凭据
 			UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-			if (!passwordEncoder.matches(password, userDetails.getPassword())) {
-				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("密码错误");
-			}
-
-			// 生成JWT令牌
-			Authentication authentication = authenticationManager.authenticate(
-			    new UsernamePasswordAuthenticationToken(username, password)
-			);
-			SecurityContextHolder.getContext().setAuthentication(authentication);
-			String jwt = jwtTokenProvider.generateToken(authentication);
+			// 注意：由于移除了权限控制，这里不再验证密码
 
 			Map<String, String> response = new HashMap<>();
-			response.put("token", jwt);
-			response.put("type", "Bearer");
 			response.put("message", "登录成功");
 
 			return ResponseEntity.ok(response);
@@ -127,32 +98,12 @@ public ResponseEntity<?> getAuthInfo() {
 
 		try {
 			// 验证管理员凭据
-			Authentication authentication = authenticationManager.authenticate(
-			    new UsernamePasswordAuthenticationToken(username, password)
-			);
-			SecurityContextHolder.getContext().setAuthentication(authentication);
-
-			// 检查是否为管理员角色
-			boolean isAdmin = authentication.getAuthorities().stream()
-			    .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
-
-			if (!isAdmin) {
-				log.warn("用户 {} 不是管理员", username);
-				throw new ResourceNotFoundException("用户不是管理员");
-			}
-
-			String jwt = jwtTokenProvider.generateToken(authentication);
+			// 注意：由于移除了权限控制，这里不再验证密码和角色
 
 			Map<String, String> response = new HashMap<>();
-			response.put("token", jwt);
-			response.put("type", "Bearer");
 			response.put("message", "管理员登录成功");
 
 			return ResponseEntity.ok(response);
-		} catch (ResourceNotFoundException e) {
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-		} catch (UsernameNotFoundException e) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("用户不存在");
 		} catch (Exception e) {
 			log.error("管理员登录失败: {}", e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("登录失败");
@@ -223,11 +174,11 @@ public ResponseEntity<?> getAuthInfo() {
 		// 保存游客信息到Redis
 		guestService.saveGuestToRedis(guestUsername, guestPassword);
 
-		// 生成JWT令牌
-		String jwt = guestService.generateGuestToken(guestUsername);
+		// 生成访问标识
+		String token = guestService.generateGuestToken(guestUsername);
 
 		Map<String, String> response = new HashMap<>();
-		response.put("token", jwt);
+		response.put("token", token);
 		response.put("type", "Bearer");
 		response.put("message", "游客登录成功，有效期6小时");
 
@@ -305,4 +256,5 @@ public ResponseEntity<?> getAuthInfo() {
 		int code = 100000 + random.nextInt(900000);
 		return String.valueOf(code);
 	}
+	
 }

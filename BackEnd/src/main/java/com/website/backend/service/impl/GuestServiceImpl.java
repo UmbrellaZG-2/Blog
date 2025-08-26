@@ -4,35 +4,30 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 import com.website.backend.entity.Role;
 import com.website.backend.repository.jpa.RoleRepository;
-import com.website.backend.security.JwtTokenProvider;
 import com.website.backend.service.GuestService;
-import lombok.extern.slf4j.Slf4j;
-import java.util.concurrent.TimeUnit;
 
-@Service
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Slf4j
+@Service
 public class GuestServiceImpl implements GuestService {
 
 	@Autowired
 	private RedisTemplate<String, Object> redisTemplate;
-
-	@Autowired
-	private PasswordEncoder passwordEncoder;
-
-	@Autowired
-	private JwtTokenProvider jwtTokenProvider;
 
 	@Autowired
 	private RoleRepository roleRepository;
@@ -66,12 +61,12 @@ public class GuestServiceImpl implements GuestService {
 		} else {
 			log.info("成功查询到ROLE_VISITOR角色");
 		}
-		Role visitorRole = visitorRoleOptional.orElse(null);
+		Role visitorRole = visitorRoleOptional.orElseThrow(() -> new RuntimeException("游客角色获取失败"));
 
 		// 创建游客信息Map
 		Map<String, Object> guestInfo = new HashMap<>();
 		guestInfo.put("username", username);
-		guestInfo.put("password", passwordEncoder.encode(password));
+		guestInfo.put("password", password); // 不再加密密码
 		guestInfo.put("role", visitorRole.getName());
 
 		// 存储到Redis并设置过期时间
@@ -106,7 +101,7 @@ public class GuestServiceImpl implements GuestService {
 			throw new IllegalArgumentException("用户名不能为空");
 		}
 
-		log.info("为游客生成JWT令牌: {}", username);
+		log.info("为游客生成访问标识: {}", username);
 
 		// 从Redis获取游客信息
 		Map<String, Object> guestInfo = getGuestFromRedis(username);
@@ -114,20 +109,7 @@ public class GuestServiceImpl implements GuestService {
 			throw new RuntimeException("游客信息不存在于Redis");
 		}
 
-		// 创建UserDetails
-		String role = (String) guestInfo.get("role");
-		UserDetails userDetails = User.builder()
-			.username(username)
-			.password((String) guestInfo.get("password"))
-			.authorities(new SimpleGrantedAuthority(role))
-			.build();
-
-		// 创建Authentication
-		Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null,
-				userDetails.getAuthorities());
-
-		// 生成具有自定义过期时间的JWT令牌
-		return jwtTokenProvider.generateTokenWithExpiration(authentication, guestExpirationMs);
+		// 返回用户名作为访问标识
+		return username;
 	}
-
 }

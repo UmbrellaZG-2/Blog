@@ -1,6 +1,4 @@
-package com.website.backend.config;
-
-
+package com.website.backend.security;
 
 import java.io.IOException;
 import java.util.List;
@@ -12,49 +10,25 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.ContentCachingRequestWrapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import com.website.backend.security.JwtAuthenticationFilter;
-import com.website.backend.security.JwtTokenProvider;
-import com.website.backend.service.impl.RedisUserDetailsService;
 
 import io.micrometer.common.lang.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.website.backend.security.JwtExceptionHandlerFilter;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
 @Slf4j
 public class SecurityConfig {
-
-	private final RedisUserDetailsService redisUserDetailsService;
-
-	public SecurityConfig(RedisUserDetailsService redisUserDetailsService) {
-		this.redisUserDetailsService = redisUserDetailsService;
-	}
-
-	@Bean
-	public UserDetailsService userDetailsService() {
-		return redisUserDetailsService;
-	}
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
@@ -62,35 +36,15 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	public DaoAuthenticationProvider authenticationProvider() {
-		DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-		authProvider.setUserDetailsService(userDetailsService());
-		authProvider.setPasswordEncoder(passwordEncoder());
-		return authProvider;
-	}
-
-	@Bean
-	public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-		return authConfig.getAuthenticationManager();
-	}
-
-	@Autowired
-	private JwtTokenProvider jwtTokenProvider;
-
-	@Bean
-	public JwtAuthenticationFilter jwtAuthenticationFilter() {
-		return new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService());
-	}
-
-	@Bean
-	public JwtExceptionHandlerFilter jwtExceptionHandlerFilter(ObjectMapper objectMapper) {
-		return new JwtExceptionHandlerFilter(objectMapper);
-	}
-
-	@Bean
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOrigins(List.of("http://101.200.43.186:8082", "http://101.200.43.186:8083", "http://localhost:8082", "http://localhost:8083"));
+		configuration.setAllowedOrigins(List.of(
+			"http://101.200.43.186:8082", 
+			"http://101.200.43.186:8083", 
+			"http://localhost:8082", 
+			"http://localhost:8083",
+			"http://localhost:8081",
+			"http://101.200.43.186:8081"));
 		configuration.addAllowedMethod("*");
 		configuration.addAllowedHeader("*");
 		configuration.setAllowCredentials(true);
@@ -106,38 +60,49 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // 公开访问的API
-                .requestMatchers("/articles").permitAll()
-                .requestMatchers("/articles/**").permitAll()
-                .requestMatchers("/attachments/download/**").permitAll()
-                .requestMatchers("/attachments/article/get/**").permitAll()
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/home/**").permitAll()
-                .requestMatchers("/images/article/*/cover/get").permitAll()
-                .requestMatchers("/images/article/*/getAll").permitAll()
-                .requestMatchers("/articles/categories/get").permitAll()
-                .requestMatchers("/test/**").permitAll()
+                // 公开接口 - 无需认证
+                .requestMatchers(HttpMethod.GET, "/api/articles").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/articles/search").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/articles/get/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/articles/category/get/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/articles/*/comments/put").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/articles/*/comments/get").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/articles/categories/get").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/attachments/download/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/attachments/article/get/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/auth/get").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/admin/login").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/auth/guest/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/guest/login").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/home").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/home/redirect/aboutMe").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/home/aboutMe").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/images/article/*/cover/get").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/images/article/*/getAll").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/tags/get").permitAll()
                 
-                // 管理员访问的API
-                .requestMatchers("/articles/create").hasRole("ADMIN")
-                .requestMatchers("/articles/update/**").hasRole("ADMIN")
-                .requestMatchers("/articles/delete/**").hasRole("ADMIN")
-                .requestMatchers("/articles/*/tags/**").hasRole("ADMIN")
-                .requestMatchers("/attachments/upload").hasRole("ADMIN")
-                .requestMatchers("/attachments/delete/**").hasRole("ADMIN")
-                .requestMatchers("/attachments/get").hasRole("ADMIN")
-                .requestMatchers("/images/article/*/cover/update").hasRole("ADMIN")
-                .requestMatchers("/images/article/*/cover/delete").hasRole("ADMIN")
+                // 管理员接口 - 需要认证
+                .requestMatchers(HttpMethod.POST, "/api/articles/create").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/articles/update/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/articles/delete/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/articles/*/tags/put").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/articles/*/tags/delete/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/attachments/upload").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/attachments/delete/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/attachments/get").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/images/article/*/cover/update").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/images/article/*/cover/delete").hasRole("ADMIN")
                 
-                // 隐藏API（不应该被外部直接访问）
-                .requestMatchers("/auth/register/send-code").denyAll()
-                .requestMatchers("/auth/register/verify").denyAll()
+                // 隐藏接口 - 特殊处理
+                .requestMatchers(HttpMethod.POST, "/api/auth/admin/register").permitAll() // 实际在控制器中限制访问
+                .requestMatchers(HttpMethod.POST, "/api/auth/register/send-code").permitAll() // 实际在控制器中限制访问
+                .requestMatchers(HttpMethod.POST, "/api/auth/register/verify").permitAll() // 实际在控制器中限制访问
                 
-                // 其他所有请求需要认证
+                // 其他所有请求拒绝访问
                 .anyRequest().authenticated()
             )
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         
         return http.build();
     }
