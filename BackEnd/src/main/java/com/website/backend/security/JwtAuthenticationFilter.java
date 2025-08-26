@@ -49,40 +49,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	 * @throws ServletException 如果发生Servlet相关异常
 	 * @throws IOException 如果发生IO异常
 	 */
-	// 公开路径列表，与SecurityConfig中的配置保持一致
-    private static final List<String> PUBLIC_PATHS = Arrays.asList(
-        "/api/articles/**",
-        "/api/attachments/download/**",
-        "/api/attachments/article/get/**",
-        "/api/auth/get",
-        "/api/auth/login",
-        "/api/auth/admin/login",
-        "/api/auth/guest/login",
-        "/api/auth/admin/register",
-        "/api/home/**",
-        "/api/images/article/**/cover/get",
-        "/api/images/article/**/getAll",
-        "/api/tags/**",
-        "/api/articles/categories/get",
-        "/api/test/get",
-        "/api/test/post"
-    );
-
-    private final AntPathMatcher pathMatcher = new AntPathMatcher();
-
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
-		// 检查是否为公开路径
-		String requestURI = request.getRequestURI();
-		for (String publicPath : PUBLIC_PATHS) {
-			if (pathMatcher.match(publicPath, requestURI)) {
-				filterChain.doFilter(request, response);
-				return;
-			}
-		}
-
-		// 非公开路径，需要JWT认证
 		try {
 			String jwt = parseJwt(request);
 			if (jwt != null && tokenProvider.validateJwtToken(jwt)) {
@@ -94,16 +63,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 				authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
 				SecurityContextHolder.getContext().setAuthentication(authentication);
-				filterChain.doFilter(request, response);
-			} else {
-				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-				response.getWriter().write("Unauthorized: No valid JWT token provided");
 			}
 		}
 		catch (Exception e) {
-			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-			response.getWriter().write("Unauthorized: Invalid JWT token");
+			log.error("Cannot set user authentication: {}", e.getMessage());
 		}
+
+		filterChain.doFilter(request, response);
 	}
 
 	/**

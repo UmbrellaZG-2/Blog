@@ -1,39 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { deleteArticleTag, addArticleTag, deleteArticle, getArticles } from '@/services/api';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Edit, Trash2, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getArticles, deleteArticle } from '@/services/api';
 
 const AdminArticles = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
-  const [articles, setArticles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   // 获取文章列表
-  useEffect(() => {
-    const fetchArticles = async () => {
-      try {
-        setLoading(true);
-        const data = await getArticles();
-        setArticles(data);
-      } catch (err) {
-        setError('获取文章列表失败');
-        console.error('Failed to fetch articles:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchArticles();
-  }, []);
+  const { data: articles, isLoading, error } = useQuery({
+    queryKey: ['adminArticles'],
+    queryFn: getArticles,
+  });
 
   // 过滤文章
-  const filteredArticles = articles.filter(article => 
+  const filteredArticles = (articles?.data || []).filter(article => 
     article?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     article?.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     article?.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -46,15 +33,26 @@ const AdminArticles = () => {
 
   const handleDelete = async (id) => {
     try {
-      await deleteArticle(id);
-      // 从列表中移除删除的文章
-      setArticles(prev => prev.filter(article => article.id !== id));
-      toast.success(`已删除文章 ID: ${id}`);
+      const response = await deleteArticle(id);
+      if (response.success) {
+        // 成功删除后刷新数据
+        queryClient.invalidateQueries(['adminArticles']);
+        toast.success('文章删除成功');
+      } else {
+        toast.error(`删除失败：${response.message}`);
+      }
     } catch (error) {
-      toast.error(`删除文章失败: ${error.response?.data?.message || error.message}`);
-      console.error('Failed to delete article:', error);
+      toast.error(`删除失败：${error.message}`);
     }
   };
+
+  if (isLoading) {
+    return <div className="container mx-auto px-4 py-8">加载中...</div>;
+  }
+
+  if (error) {
+    return <div className="container mx-auto px-4 py-8 text-red-500">加载失败: {error.message}</div>;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -134,23 +132,7 @@ const AdminArticles = () => {
                                 variant="destructive" 
                                 size="sm" 
                                 className="absolute -top-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
-                                onClick={async () => {
-                                  try {
-                                    await deleteArticleTag(article.id, tag.id);
-                                    // 更新文章标签列表
-                                    const updatedArticles = articles.map(a => {
-                                      if (a.id === article.id) {
-                                        return { ...a, tags: a.tags.filter(t => t.id !== tag.id) };
-                                      }
-                                      return a;
-                                    });
-                                    setArticles(updatedArticles);
-                                    toast.success(`已删除标签: ${tag.name}`);
-                                  } catch (error) {
-                                    toast.error(`删除标签失败: ${error.response?.data?.message || error.message}`);
-                                    console.error('Failed to delete tag:', error);
-                                  }
-                                }}
+                                onClick={() => toast.info(`删除标签: ${tag}`)}
                               >
                                 删除
                               </Button>
@@ -159,22 +141,8 @@ const AdminArticles = () => {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="h-5 px-1 text-xs" 
-                            onClick={async () => {
-                              try {
-                                const newTagId = prompt('请输入标签ID:');
-                                if (newTagId) {
-                                  await addArticleTag(article.id, newTagId);
-                                  // 刷新文章列表
-                                  const data = await getArticles();
-                                  setArticles(data);
-                                  toast.success('标签添加成功');
-                                }
-                              } catch (error) {
-                                toast.error(`添加标签失败: ${error.response?.data?.message || error.message}`);
-                                console.error('Failed to add tag:', error);
-                              }
-                            }}
+                            className="h-5 px-1 text-xs"
+                            onClick={() => toast.info('添加新标签')}
                           >
                             +
                           </Button>
@@ -189,7 +157,7 @@ const AdminArticles = () => {
                           {article.status}
                         </span>
                       </td>
-                      <td className="py-3 px-4">{article.createdAt}</td>
+                      <td className="py-3 px-4">{new Date(article.createdAt).toLocaleDateString()}</td>
                       <td className="py-3 px-4">
                         <div className="flex gap-2">
                           <Button 

@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, Clock, Tag, Download, ArrowLeft, ThumbsUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { downloadAttachment } from '@/services/api';
 
 const ArticleDetail = ({ article }) => {
   const navigate = useNavigate();
@@ -28,14 +29,27 @@ const ArticleDetail = ({ article }) => {
     setIsLiked(!isLiked);
   };
 
-  const handleDownload = (attachment) => {
-    // 直接触发下载，使用浏览器默认下载路径
-    toast.info(`正在下载 ${attachment.name}`);
-    // 模拟下载过程
-    setTimeout(() => {
+  const handleDownload = async (attachment) => {
+    try {
+      toast.info(`正在下载 ${attachment.name}`);
+      const blob = await downloadAttachment(attachment.id);
+      
+      // 创建下载链接
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', attachment.name);
+      document.body.appendChild(link);
+      link.click();
+      
+      // 清理
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
       toast.success(`${attachment.name} 下载成功`);
-      // 实际应用中这里会调用下载API
-    }, 1500);
+    } catch (error) {
+      toast.error(`下载失败: ${error.message}`);
+    }
   };
 
   return (
