@@ -4,22 +4,32 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import com.website.backend.entity.User;
 import com.website.backend.entity.VerificationCode;
+import com.website.backend.exception.ResourceNotFoundException;
+import com.website.backend.security.JwtTokenProvider;
 import com.website.backend.service.GuestService;
 import com.website.backend.service.UserService;
 import com.website.backend.service.VerificationCodeService;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -27,15 +37,10 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-	@GetMapping("/get")
-public ResponseEntity<?> getAuthInfo() {
-		Map<String, String> response = new HashMap<>();
-		response.put("message", "Auth API root endpoint");
-		response.put("available_endpoints", "/api/auth/login, /api/auth/admin/login, /api/auth/register, /api/auth/admin/register, /api/auth/guest/login");
-		return ResponseEntity.ok(response);
-	}
-
 	private final GuestService guestService;
+	private final JwtTokenProvider jwtTokenProvider;
+	private final AuthenticationManager authenticationManager;
+	private final PasswordEncoder passwordEncoder;
 
 	@Autowired
 	private VerificationCodeService verificationCodeService;
@@ -46,23 +51,47 @@ public ResponseEntity<?> getAuthInfo() {
 	@Autowired
 	private UserDetailsService userDetailsService;
 
-	public AuthController(GuestService guestService) {
+	public AuthController(GuestService guestService, JwtTokenProvider jwtTokenProvider,
+			AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder) {
 		this.guestService = guestService;
+		this.jwtTokenProvider = jwtTokenProvider;
+		this.authenticationManager = authenticationManager;
+		this.passwordEncoder = passwordEncoder;
+	}
+
+	@GetMapping("/get")
+	public ResponseEntity<?> getAuthInfo() {
+		Map<String, String> response = new HashMap<>();
+		response.put("message", "Auth API root endpoint");
+		response.put("available_endpoints", "/api/auth/login, /api/auth/admin/login, /api/auth/register, /api/auth/admin/register, /api/auth/guest/login");
+		return ResponseEntity.ok(response);
 	}
 
 	@PostMapping("/login")
 	public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
 		String username = request.get("username");
 		String password = request.get("password");
-		
+
 		if (username == null || username.isEmpty() || password == null || password.isEmpty()) {
 			return ResponseEntity.badRequest().body("用户名和密码不能为空");
 		}
 
 		try {
+			// 验证用户凭据
 			UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+			if (!passwordEncoder.matches(password, userDetails.getPassword())) {
+				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("密码错误");
+			}
+
+			// 生成JWT令牌
+			Authentication authentication = authenticationManager.authenticate(
+					new UsernamePasswordAuthenticationToken(username, password));
+			SecurityContextHolder.getContext().setAuthentication(authentication);
+			String jwt = jwtTokenProvider.generateToken(authentication);
 
 			Map<String, String> response = new HashMap<>();
+			response.put("token", jwt);
+			response.put("type", "Bearer");
 			response.put("message", "登录成功");
 
 			return ResponseEntity.ok(response);
@@ -84,10 +113,32 @@ public ResponseEntity<?> getAuthInfo() {
 		}
 
 		try {
+			// 验证管理员凭据
+			Authentication authentication = authenticationManager.authenticate(
+					new UsernamePasswordAuthenticationToken(username, password));
+			SecurityContextHolder.getContext().setAuthentication(authentication);
+
+			// 检查是否为管理员角色
+			boolean isAdmin = authentication.getAuthorities().stream()
+					.anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+			if (!isAdmin) {
+				log.warn("用户 {} 不是管理员", username);
+				throw new ResourceNotFoundException("用户不是管理员");
+			}
+
+			String jwt = jwtTokenProvider.generateToken(authentication);
+
 			Map<String, String> response = new HashMap<>();
+			response.put("token", jwt);
+			response.put("type", "Bearer");
 			response.put("message", "管理员登录成功");
 
 			return ResponseEntity.ok(response);
+		} catch (ResourceNotFoundException e) {
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+		} catch (UsernameNotFoundException e) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("用户不存在");
 		} catch (Exception e) {
 			log.error("管理员登录失败: {}", e.getMessage());
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("登录失败");
@@ -137,11 +188,14 @@ public ResponseEntity<?> getAuthInfo() {
 	}
 
 	private ResponseEntity<?> processGuestLogin() {
+		// 生成游客用户名和密码
 		String guestUsername = guestService.generateGuestUsername();
 		String guestPassword = "guest_password";
 
+		// 保存游客信息到Redis
 		guestService.saveGuestToRedis(guestUsername, guestPassword);
 
+		// 生成访问标识
 		String token = guestService.generateGuestToken(guestUsername);
 
 		Map<String, String> response = new HashMap<>();
@@ -175,9 +229,8 @@ public ResponseEntity<?> getAuthInfo() {
 		code.setUsername(username);
 		code.setCode(verificationCode);
 		code.setExpireTime(java.time.LocalDateTime.ofInstant(
-		        java.time.Instant.ofEpochMilli(expirationTime),
-		        java.time.ZoneId.systemDefault()
-		));
+				java.time.Instant.ofEpochMilli(expirationTime),
+				java.time.ZoneId.systemDefault()));
 		code.setCreateTime(java.time.LocalDateTime.now());
 		code.setUpdateTime(java.time.LocalDateTime.now());
 		verificationCodeService.saveVerificationCode(code);
@@ -194,21 +247,23 @@ public ResponseEntity<?> getAuthInfo() {
 		String verificationCode = request.get("verificationCode");
 		Boolean isAdmin = Boolean.valueOf(request.getOrDefault("isAdmin", "false"));
 
-		if (username == null || username.isEmpty() || password == null || password.isEmpty() || verificationCode == null || verificationCode.isEmpty()) {
+		if (username == null || username.isEmpty() || password == null || password.isEmpty()
+				|| verificationCode == null || verificationCode.isEmpty()) {
 			return ResponseEntity.badRequest().body("用户名、密码和验证码不能为空");
 		}
 
-		// 从数据库中获取验证码
+		// 检查验证码是否有效
 		Optional<VerificationCode> storedCodeOptional = verificationCodeService.findByUsername(username);
 
-		if (!storedCodeOptional.isPresent() || !storedCodeOptional.get().getCode().equals(verificationCode) || 
-		    storedCodeOptional.get().getExpireTime().isBefore(java.time.LocalDateTime.now())) {
+		if (!storedCodeOptional.isPresent() || !storedCodeOptional.get().getCode().equals(verificationCode)
+				|| storedCodeOptional.get().getExpireTime().isBefore(java.time.LocalDateTime.now())) {
 			return ResponseEntity.badRequest().body("验证码无效或已过期");
 		}
 
+		// 注册用户
 		try {
 			User user = userService.registerUser(username, password, isAdmin);
-			// 删除已使用的验证码
+			// 注册成功后删除验证码
 			verificationCodeService.deleteVerificationCode(storedCodeOptional.get().getId());
 			return ResponseEntity.ok("注册成功");
 		} catch (RuntimeException e) {
@@ -216,10 +271,13 @@ public ResponseEntity<?> getAuthInfo() {
 		}
 	}
 
+	/**
+	 * 生成6位数字验证码
+	 */
 	private String generateVerificationCode() {
 		Random random = new Random();
 		int code = 100000 + random.nextInt(900000);
 		return String.valueOf(code);
 	}
-	
+
 }
