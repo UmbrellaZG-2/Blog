@@ -1,8 +1,12 @@
 import { fileURLToPath, URL } from 'url';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { tmpdir } from 'os';
-// Removed nocode plugins
+import { devLogger } from '@meituan-nocode/vite-plugin-dev-logger';
+import {
+  devHtmlTransformer,
+  prodHtmlTransformer,
+} from '@meituan-nocode/vite-plugin-nocode-html-transformer';
 import react from '@vitejs/plugin-react';
 
 const CHAT_VARIABLE = process.env.CHAT_VARIABLE || '';
@@ -18,57 +22,31 @@ const plugins = isProdEnv
     ? [react(), prodHtmlTransformer(CHAT_VARIABLE)]
     : [react()]
   : [
-      // devLogger({
-      //   dirname: resolve(tmpdir(), '.umbrella-dev-logs'),
-      //   maxFiles: '3d',
-      // }),
-      react(),
-      // devHtmlTransformer(CHAT_VARIABLE),
+      react()
+      // 禁用NoCode相关插件以避免localhost域名检测问题
     ];
 
+// 开发环境配置为简单的React应用，不需要NoCode运行时
+const devConfig = {
+  server: {
+    host: '::',
+    port: '8082',
+    hmr: {
+      overlay: false,
+    },
+  },
+  plugins,
+  base: publicPath,
+  build: {
+    outDir,
+  },
+  resolve: {
+    alias: [
+      { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
+      { find: 'lib', replacement: resolve(__dirname, 'lib') },
+    ],
+  },
+};
+
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
-  // 加载环境变量
-  const env = loadEnv(mode, process.cwd(), 'VITE_');
-  const apiBaseUrl = env.VITE_API_BASE_URL || 'http://101.200.43.186:8081/api';
-  const proxyTarget = apiBaseUrl.replace(/\/api$/, '');
-
-  // 确保proxyTarget有值
-  if (!proxyTarget) {
-    throw new Error('VITE_API_BASE_URL is not defined or invalid in environment variables');
-  }
-
-  return {
-    server: {
-      host: '::',
-      port: 8082,
-      hmr: {
-        overlay: false,
-      },
-      proxy: {
-        '/api': {
-          target: proxyTarget,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, '')
-        }
-      }
-    },
-    plugins,
-    base: publicPath,
-    build: {
-      outDir,
-    },
-    resolve: {
-      alias: [
-        {
-          find: '@',
-          replacement: fileURLToPath(new URL('./src', import.meta.url)),
-        },
-        {
-          find: 'lib',
-          replacement: resolve(__dirname, 'lib'),
-        },
-      ],
-    },
-  }
- });
+export default defineConfig(devConfig);

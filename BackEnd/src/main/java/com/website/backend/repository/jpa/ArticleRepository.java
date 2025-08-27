@@ -33,5 +33,10 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
 	// 根据articleId查询文章
 	Optional<Article> findByArticleId(UUID articleId);
+	
+	// 添加缺失的搜索方法
+	Page<Article> findByTitleContainingOrContentContaining(String title, String content, Pageable pageable);
+	
+	Page<Article> findByCategoryAndTitleContainingOrContentContaining(String category, String title, String content, Pageable pageable);
 
 }

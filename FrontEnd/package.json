@@ -1,15 +1,14 @@
 {
-  "name": "vite-project",
+  "name": "ZG_Blog",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --mode production",
+    "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview",
-    "build:prod": "vite build --mode production"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.6.0",
@@ -67,6 +66,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@meituan-nocode/vite-plugin-dev-logger": "^0.1.0",
+    "@meituan-nocode/vite-plugin-nocode-html-transformer": "^0.2.5",
     "@types/react": "^18.2.56",
     "@types/react-dom": "^18.2.19",
     "@vitejs/plugin-react": "4.3.4",

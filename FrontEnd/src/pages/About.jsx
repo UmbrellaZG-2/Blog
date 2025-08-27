@@ -21,7 +21,7 @@ const About = () => {
       <div className="space-y-8">
         <div className="text-center">
           <img 
-            src="/pic/zg.jpg" 
+            src="/resource/pic/zg.jpg" 
             alt="个人头像" 
             className="mx-auto object-cover w-32 h-32 rounded-full mb-4"
           />
@@ -56,7 +56,7 @@ const About = () => {
               </div>
               <div className="text-center p-4 bg-purple-50 rounded-lg">
                 <h3 className="font-semibold text-purple-800">数据库</h3>
-                <p className="text-sm text-purple-600 mt-2">MySQL, MongoDB, Redis</p>
+                <p className="text-sm text-purple-600 mt-2">MySQL, mariaDB, Redis</p>
               </div>
               <div className="text-center p-4 bg-orange-50 rounded-lg">
                 <h3 className="font-semibold text-orange-800">机器学习</h3>
@@ -67,8 +67,8 @@ const About = () => {
                 <p className="text-sm text-red-600 mt-2">Git, VS Code, LLM</p>
               </div>
               <div className="text-center p-4 bg-indigo-50 rounded-lg">
-                <h3 className="font-semibold text-indigo-800">前端</h3>
-                <p className="text-sm text-indigo-600 mt-2">React</p>
+                <h3 className="font-semibold text-indigo-800">中间件</h3>
+                <p className="text-sm text-indigo-600 mt-2">Nacos, ELK, Kfaka</p>
               </div>
             </div>
           </CardContent>

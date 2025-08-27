@@ -1,71 +1,88 @@
 package com.website.backend.service.impl;
 
 import com.website.backend.service.RateLimitService;
+import com.website.backend.service.IpRateLimitService;
+import com.website.backend.entity.IpRateLimit;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.TimeUnit;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 
 @Service
 public class RateLimitServiceImpl implements RateLimitService {
 
-	private final RedisTemplate<String, Object> redisTemplate;
+    private final IpRateLimitService ipRateLimitService;
 
-	// 常量定义
-	private static final String DOWNLOAD_RATE_LIMIT_PREFIX = "download:rate:limit:";
+    private static final int TIME_WINDOW_SECONDS = 10;
 
-	private static final String BLACKLIST_PREFIX = "download:block:";
+    private static final int MAX_REQUESTS = 5;
 
-	private static final int TIME_WINDOW_SECONDS = 10; // 10秒时间窗口
+    private static final long BLOCK_DURATION_DAYS = 1;
 
-	private static final int MAX_REQUESTS = 5; // 最大请求次数
+    @Autowired
+    public RateLimitServiceImpl(IpRateLimitService ipRateLimitService) {
+        this.ipRateLimitService = ipRateLimitService;
+    }
 
-	private static final long BLOCK_DURATION_DAYS = 1; // 黑名单持续时间（天）
+    @Override
+    public boolean isIpBlocked(String ip) {
+        return ipRateLimitService.isIpBlocked(ip);
+    }
 
-	@Autowired
-	public RateLimitServiceImpl(RedisTemplate<String, Object> redisTemplate) {
-		this.redisTemplate = redisTemplate;
-	}
+    @Override
+    public boolean recordDownloadRequest(String ip) {
+        if (isIpBlocked(ip)) {
+            return true;
+        }
 
-	@Override
-	public boolean isIpBlocked(String ip) {
-		String key = BLACKLIST_PREFIX + ip;
-		return Boolean.TRUE.equals(redisTemplate.hasKey(key));
-	}
+        // 获取或创建IP限制记录
+        Optional<IpRateLimit> rateLimitOptional = ipRateLimitService.findByIpAddress(ip);
+        LocalDateTime currentTime = LocalDateTime.now();
+        IpRateLimit rateLimit;
 
-	@Override
-	public boolean recordDownloadRequest(String ip) {
-		// 检查IP是否已被拉黑
-		if (isIpBlocked(ip)) {
-			return true;
-		}
+        // 检查时间窗口是否过期
+        if (!rateLimitOptional.isPresent()) {
+            // 创建新记录
+            rateLimit = new IpRateLimit();
+            rateLimit.setIpAddress(ip);
+            rateLimit.setRequestCount(1);
+            rateLimit.setWindowStartTime(currentTime);
+            rateLimit.setWindowEndTime(currentTime.plus(TIME_WINDOW_SECONDS, ChronoUnit.SECONDS));
+            rateLimit.setIsBlocked(false);
+            rateLimit.setCreateTime(currentTime);
+            rateLimit.setUpdateTime(currentTime);
+            ipRateLimitService.saveIpRateLimit(rateLimit);
+        } else {
+            rateLimit = rateLimitOptional.get();
+            if (rateLimit.getWindowEndTime().isBefore(currentTime)) {
+                // 时间窗口已过期，重置计数
+                rateLimit.setRequestCount(1);
+                rateLimit.setWindowStartTime(currentTime);
+                rateLimit.setWindowEndTime(currentTime.plus(TIME_WINDOW_SECONDS, ChronoUnit.SECONDS));
+                rateLimit.setUpdateTime(currentTime);
+                ipRateLimitService.updateIpRateLimit(rateLimit);
+            } else {
+                // 增加请求计数
+                rateLimit.setRequestCount(rateLimit.getRequestCount() + 1);
+                rateLimit.setUpdateTime(currentTime);
+                ipRateLimitService.updateIpRateLimit(rateLimit);
+            }
+        }
 
-		String key = DOWNLOAD_RATE_LIMIT_PREFIX + ip;
+        // 检查是否超过最大请求数
+        if (rateLimit.getRequestCount() > MAX_REQUESTS) {
+            blockIp(ip);
+            return true;
+        }
 
-		// 增加计数
-		Long count = redisTemplate.opsForValue().increment(key);
+        return false;
+    }
 
-		// 设置过期时间（仅在第一次计数时）
-		if (count != null && count == 1) {
-			redisTemplate.expire(key, TIME_WINDOW_SECONDS, TimeUnit.SECONDS);
-		}
-
-		// 检查是否超过限制
-		if (count != null && count > MAX_REQUESTS) {
-			// 添加到黑名单
-			blockIp(ip);
-			return true;
-		}
-
-		return false;
-	}
-
-	@Override
-	public void blockIp(String ip) {
-		String key = BLACKLIST_PREFIX + ip;
-		redisTemplate.opsForValue().set(key, true);
-		redisTemplate.expire(key, BLOCK_DURATION_DAYS, TimeUnit.DAYS);
-	}
+    @Override
+    public void blockIp(String ip) {
+        ipRateLimitService.blockIp(ip);
+    }
 
 }

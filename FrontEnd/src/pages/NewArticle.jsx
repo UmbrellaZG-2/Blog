@@ -6,7 +6,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Save, Eye, Upload, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { saveDraft, createArticle, saveDraftWithAttachments, createArticleWithAttachments } from '@/services/api';
 import {
   Select,
   SelectContent,
@@ -14,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { createArticle, uploadAttachment, uploadCoverImage } from '@/services/api';
 
 const NewArticle = () => {
   const navigate = useNavigate();
@@ -23,11 +23,12 @@ const NewArticle = () => {
     content: '',
     category: '',
     tags: '',
-    coverImage: null,
     status: 'draft'
   });
   const [attachments, setAttachments] = useState([]);
+  const [coverImage, setCoverImage] = useState(null);
   const [coverImagePreview, setCoverImagePreview] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const categories = [
     { id: 'tech', name: '技术' },
@@ -44,10 +45,7 @@ const NewArticle = () => {
   const handleCoverImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setFormData(prev => ({
-        ...prev,
-        coverImage: file
-      }));
+      setCoverImage(file);
       
       // 生成预览URL
       const previewUrl = URL.createObjectURL(file);
@@ -74,51 +72,72 @@ const NewArticle = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
-    // 基本验证
-    if (!formData.title.trim()) {
-      toast.error('请输入文章标题');
-      return;
-    }
-    
-    if (!formData.content.trim()) {
-      toast.error('请输入文章内容');
-      return;
-    }
-
     try {
+      // 基本验证
+      if (!formData.title.trim()) {
+        toast.error('请输入文章标题');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      if (!formData.content.trim()) {
+        toast.error('请输入文章内容');
+        setIsSubmitting(false);
+        return;
+      }
+
       // 准备文章数据
       const articleData = {
         title: formData.title,
-        category: formData.category,
+        summary: formData.summary,
         content: formData.content,
+        category: formData.category,
         tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
-        coverImage: formData.coverImage
+        status: formData.status
       };
+
+      // 创建文章
+      const response = await createArticle(articleData);
       
-      // 根据状态和是否有附件调用不同的API
-      if (attachments.length > 0) {
-        if (formData.status === 'draft') {
-          await saveDraftWithAttachments(articleData, attachments);
-          toast.success('带附件的草稿保存成功！');
-        } else {
-          await createArticleWithAttachments(articleData, attachments);
-          toast.success('带附件的文章发布成功！');
+      if (response.success) {
+        const articleId = response.data.id;
+        
+        // 上传封面图片（如果有）
+        if (coverImage) {
+          try {
+            await uploadCoverImage(articleId, coverImage);
+          } catch (error) {
+            console.error('封面图片上传失败:', error);
+            toast.warning('封面图片上传失败，但文章已保存');
+          }
         }
+        
+        // 上传附件（如果有）
+        if (attachments.length > 0) {
+          try {
+            for (const attachment of attachments) {
+              const formData = new FormData();
+              formData.append('file', attachment.file);
+              formData.append('articleId', articleId);
+              await uploadAttachment(formData);
+            }
+          } catch (error) {
+            console.error('附件上传失败:', error);
+            toast.warning('部分附件上传失败，但文章已保存');
+          }
+        }
+        
+        toast.success('文章保存成功！');
+        navigate('/admin/articles');
       } else {
-        if (formData.status === 'draft') {
-          await saveDraft(articleData);
-          toast.success('草稿保存成功！');
-        } else {
-          await createArticle(articleData);
-          toast.success('文章发布成功！');
-        }
+        toast.error(`文章保存失败：${response.message}`);
       }
-      
-      navigate('/admin/articles');
     } catch (error) {
-      console.error('保存文章失败:', error);
-      toast.error('保存文章失败: ' + (error.response?.data?.message || error.message));
+      toast.error(`文章保存失败：${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -145,13 +164,17 @@ const NewArticle = () => {
         </Button>
         <h1 className="text-2xl font-bold">新建文章</h1>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePreview}>
+          <Button variant="outline" onClick={handlePreview} disabled={isSubmitting}>
             <Eye className="w-4 h-4 mr-2" />
             预览
           </Button>
-          <Button onClick={handleSubmit}>
-            <Save className="w-4 h-4 mr-2" />
-            保存
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? '保存中...' : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                保存
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -214,23 +237,17 @@ const NewArticle = () => {
 
             <div>
               <label className="block text-sm font-medium mb-2">封面图片（可选）</label>
-              <div className="mt-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => document.getElementById('coverImageInput').click()}
-                  className="flex items-center"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  选择图片
-                </Button>
+              <div className="flex items-center gap-2">
                 <Input
-                  id="coverImageInput"
                   type="file"
                   accept="image/*"
                   onChange={handleCoverImageChange}
-                  className="hidden"
+                  className="flex-1"
                 />
+                <Button type="button" variant="outline">
+                  <Upload className="w-4 h-4 mr-2" />
+                  选择图片
+                </Button>
               </div>
               {coverImagePreview && (
                 <div className="mt-2">
@@ -339,12 +356,17 @@ const NewArticle = () => {
             type="button" 
             variant="outline" 
             onClick={() => navigate('/admin/articles')}
+            disabled={isSubmitting}
           >
             取消
           </Button>
-          <Button type="submit">
-            <Save className="w-4 h-4 mr-2" />
-            保存文章
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? '保存中...' : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                保存文章
+              </>
+            )}
           </Button>
         </div>
       </form>

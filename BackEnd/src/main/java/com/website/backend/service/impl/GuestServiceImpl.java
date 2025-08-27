@@ -4,101 +4,95 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.website.backend.entity.Role;
-import com.website.backend.repository.jpa.RoleRepository;
-import com.website.backend.security.JwtTokenProvider;
-import com.website.backend.service.GuestService;
-import lombok.extern.slf4j.Slf4j;
-import java.util.concurrent.TimeUnit;
 
-@Service
+import com.website.backend.entity.Role;
+import com.website.backend.entity.GuestUser;
+import com.website.backend.repository.jpa.RoleRepository;
+import com.website.backend.service.GuestService;
+import com.website.backend.service.GuestUserService;
+
+import lombok.extern.slf4j.Slf4j;
+
 @Slf4j
+@Service
 public class GuestServiceImpl implements GuestService {
 
-	@Autowired
-	private RedisTemplate<String, Object> redisTemplate;
+    @Autowired
+    private GuestUserService guestUserService;
 
-	@Autowired
-	private PasswordEncoder passwordEncoder;
+    @Autowired
+    private RoleRepository roleRepository;
 
-	@Autowired
-	private JwtTokenProvider jwtTokenProvider;
+    @Value("${app.guest.expirationMs}")
+    private long guestExpirationMs;
 
-	@Autowired
-	private RoleRepository roleRepository;
+    private static final String GUEST_PREFIX = "guest_";
 
-	@Value("${app.guest.expirationMs}")
-	private long guestExpirationMs;
+    @Override
+    public String generateGuestUsername() {
+        return GUEST_PREFIX + UUID.randomUUID();
+    }
 
-	private static final String GUEST_PREFIX = "guest_";
+    @Override
+    public void saveGuestToRedis(String username, String password) {
+        log.info("保存游客信息到数据库: {}", username);
 
-	private static final String REDIS_KEY_PREFIX = "guest:";
+        log.info("开始查询ROLE_VISITOR角色");
+        Optional<Role> visitorRoleOptional = roleRepository.findByName("ROLE_VISITOR");
+        if (!visitorRoleOptional.isPresent()) {
+            log.warn("游客角色不存在，正在创建ROLE_VISITOR角色");
+            Role visitorRole = new Role();
+            visitorRole.setName("ROLE_VISITOR");
+            visitorRole = roleRepository.save(visitorRole);
+            log.info("已创建ROLE_VISITOR角色: {}", visitorRole.getName());
+            visitorRoleOptional = Optional.of(visitorRole);
+        } else {
+            log.info("成功查询到ROLE_VISITOR角色");
+        }
+        Role visitorRole = visitorRoleOptional.orElseThrow(() -> new RuntimeException("游客角色获取失败"));
 
-	@Override
-	public String generateGuestUsername() {
-		return GUEST_PREFIX + UUID.randomUUID();
-	}
+        // 创建游客用户实体
+        GuestUser guestUser = new GuestUser();
+        guestUser.setUsername(username);
+        guestUser.setPassword(password);
+        guestUser.setRole(visitorRole.getName());
+        
+        // 计算过期时间
+        long expirationTimeMillis = System.currentTimeMillis() + guestExpirationMs;
+        guestUser.setExpireTime(java.time.LocalDateTime.ofInstant(
+                java.time.Instant.ofEpochMilli(expirationTimeMillis),
+                java.time.ZoneId.systemDefault()
+        ));
+        guestUser.setCreateTime(java.time.LocalDateTime.now());
+        guestUser.setUpdateTime(java.time.LocalDateTime.now());
 
-	@Override
-	public void saveGuestToRedis(String username, String password) {
-		log.info("保存游客信息到Redis: {}", username);
+        // 保存到数据库
+        guestUserService.saveGuestUser(guestUser);
 
-		// 获取游客角色
-		log.info("开始查询ROLE_VISITOR角色");
-		Optional<Role> visitorRoleOptional = roleRepository.findByName("ROLE_VISITOR");
-		if (!visitorRoleOptional.isPresent()) {
-			log.warn("游客角色不存在，正在创建ROLE_VISITOR角色");
-			Role visitorRole = new Role();
-			visitorRole.setName("ROLE_VISITOR");
-			visitorRole = roleRepository.save(visitorRole);
-			log.info("已创建ROLE_VISITOR角色: {}", visitorRole.getName());
-			visitorRoleOptional = Optional.of(visitorRole);
-		} else {
-			log.info("成功查询到ROLE_VISITOR角色");
-		}
-		Role visitorRole = visitorRoleOptional.orElse(null);
+        log.info("游客信息已保存到数据库，过期时间: {}毫秒", guestExpirationMs);
+    }
 
-		// 创建游客信息Map
-		Map<String, Object> guestInfo = new HashMap<>();
-		guestInfo.put("username", username);
-		guestInfo.put("password", passwordEncoder.encode(password));
-		guestInfo.put("role", visitorRole.getName());
+    @Override
+    public Map<String, Object> getGuestFromRedis(String username) {
+        Map<String, Object> result = new HashMap<>();
+        Optional<GuestUser> guestUserOptional = guestUserService.findByUsername(username);
+        if (guestUserOptional.isPresent()) {
+            GuestUser guestUser = guestUserOptional.get();
+            result.put("username", guestUser.getUsername());
+            result.put("password", guestUser.getPassword());
+            result.put("role", guestUser.getRole());
+        }
+        return result;
+    }
 
-		// 存储到Redis并设置过期时间
-		String redisKey = REDIS_KEY_PREFIX + username;
-		redisTemplate.opsForHash().putAll(redisKey, guestInfo);
-		redisTemplate.expire(redisKey, guestExpirationMs, TimeUnit.MILLISECONDS);
-
-		log.info("游客信息已保存到Redis，过期时间: {}毫秒", guestExpirationMs);
-	}
-
-	@Override
-	public Map<String, Object> getGuestFromRedis(String username) {
-		String redisKey = REDIS_KEY_PREFIX + username;
-		Map<String, Object> result = new HashMap<>();
-		redisTemplate.opsForHash().entries(redisKey).forEach((key, value) -> {
-			if (key instanceof String) {
-				result.put((String) key, value);
-			}
-		});
-		return result;
-	}
-
-	@Override
-	public boolean existsInRedis(String username) {
-		String redisKey = REDIS_KEY_PREFIX + username;
-		return redisTemplate.hasKey(redisKey);
-	}
+    @Override
+    public boolean existsInRedis(String username) {
+        return guestUserService.existsByUsername(username);
+    }
 
 	@Override
 	public String generateGuestToken(String username) {
@@ -106,28 +100,13 @@ public class GuestServiceImpl implements GuestService {
 			throw new IllegalArgumentException("用户名不能为空");
 		}
 
-		log.info("为游客生成JWT令牌: {}", username);
+		log.info("为游客生成访问标识: {}", username);
 
-		// 从Redis获取游客信息
 		Map<String, Object> guestInfo = getGuestFromRedis(username);
 		if (guestInfo.isEmpty()) {
 			throw new RuntimeException("游客信息不存在于Redis");
 		}
 
-		// 创建UserDetails
-		String role = (String) guestInfo.get("role");
-		UserDetails userDetails = User.builder()
-			.username(username)
-			.password((String) guestInfo.get("password"))
-			.authorities(new SimpleGrantedAuthority(role))
-			.build();
-
-		// 创建Authentication
-		Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null,
-				userDetails.getAuthorities());
-
-		// 生成具有自定义过期时间的JWT令牌
-		return jwtTokenProvider.generateTokenWithExpiration(authentication, guestExpirationMs);
+		return username;
 	}
-
 }

@@ -1,8 +1,5 @@
 package com.website.backend.constant;
 
-/**
- * HTTP状态码常量类 用于统一管理项目中使用的HTTP响应状态码
- */
 public class HttpStatusConstants {
 
 	// 成功状态码

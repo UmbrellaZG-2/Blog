@@ -12,27 +12,18 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/home")
 public class HomeController {
-
-    /**
-     * 首页接口
-     */
+    
     @GetMapping
     public ResponseEntity<ApiResponse<Void>> home() {
         return ResponseEntity.ok(ApiResponse.success("欢迎访问首页", null));
     }
 
-    /**
-     * 跳转到关于我页面
-     */
     @GetMapping("/redirect/aboutMe")
     public ResponseEntity<Void> redirectToAboutMe() {
         log.info("重定向到关于我页面");
         return ResponseEntity.status(HttpStatus.FOUND).header("Location", "/aboutMe.html").build();
     }
 
-    /**
-     * 关于我接口
-     */
     @GetMapping("/aboutMe")
     public ResponseEntity<ApiResponse<Map<String, String>>> aboutMe() {
         Map<String, String> data = new HashMap<>();

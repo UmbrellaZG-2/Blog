@@ -5,25 +5,54 @@ import { Input } from '@/components/ui/input';
 import { User, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { login, guestLogin } from '@/services/api';
+import { adminLogin, guestLogin } from '@/services/api';
 
 const Login = () => {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     
     try {
-      // 调用登录API
-      const response = await login({ username, password });
-      toast.success('登录成功！');
-      navigate('/admin/articles');
+      // 调用管理员登录API
+      const response = await adminLogin({ username, password });
+      
+      if (response.success) {
+        // 保存token到localStorage
+        localStorage.setItem('token', response.data.token);
+        toast.success('登录成功！');
+        navigate('/admin/articles');
+      } else {
+        toast.error(`登录失败：${response.message}`);
+      }
     } catch (error) {
-      // 登录失败，显示错误提示
-      toast.error('登录失败：用户名或密码错误');
-      console.error('Login error:', error);
+      toast.error(`登录失败：${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setIsLoading(true);
+    
+    try {
+      // 调用游客登录API
+      const response = await guestLogin();
+      
+      if (response.success) {
+        toast.info('以游客身份访问');
+        navigate('/');
+      } else {
+        toast.error(`游客登录失败：${response.message}`);
+      }
+    } catch (error) {
+      toast.error(`游客登录失败：${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -61,8 +90,8 @@ const Login = () => {
                 />
               </div>
             </div>
-            <Button type="submit" className="w-full">
-              登录
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? '登录中...' : '登录'}
             </Button>
           </form>
           <div className="mt-4 space-y-3">
@@ -76,18 +105,10 @@ const Login = () => {
             <Button 
               variant="outline" 
               className="w-full"
-              onClick={async () => {
-                try {
-                  await guestLogin();
-                  toast.success('游客登录成功');
-                  navigate('/');
-                } catch (error) {
-                  toast.error(`游客登录失败: ${error.response?.data?.message || error.message}`);
-                  console.error('Guest login failed:', error);
-                }
-              }}
+              onClick={handleGuestLogin}
+              disabled={isLoading}
             >
-              以游客身份访问
+              {isLoading ? '登录中...' : '以游客身份访问'}
             </Button>
           </div>
         </CardContent>

@@ -2,57 +2,48 @@ package com.website.backend.controller;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import com.website.backend.entity.User;
+import com.website.backend.entity.VerificationCode;
 import com.website.backend.exception.ResourceNotFoundException;
 import com.website.backend.security.JwtTokenProvider;
 import com.website.backend.service.GuestService;
 import com.website.backend.service.UserService;
+import com.website.backend.service.VerificationCodeService;
+
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
-import java.util.concurrent.TimeUnit;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
-	/**
-	 * 处理/api/auth根路径的GET请求
-	 */
-	@GetMapping("/get")
-public ResponseEntity<?> getAuthInfo() {
-		Map<String, String> response = new HashMap<>();
-		response.put("message", "Auth API root endpoint");
-		response.put("available_endpoints", "/api/auth/login, /api/auth/admin/login, /api/auth/register, /api/auth/admin/register, /api/auth/guest/login");
-		return ResponseEntity.ok(response);
-	}
-
-	private final AuthenticationManager authenticationManager;
-
-	private final JwtTokenProvider jwtTokenProvider;
-
 	private final GuestService guestService;
+	private final JwtTokenProvider jwtTokenProvider;
+	private final AuthenticationManager authenticationManager;
+	private final PasswordEncoder passwordEncoder;
 
 	@Autowired
-	private RedisTemplate<String, Object> redisTemplate;
+	private VerificationCodeService verificationCodeService;
 
 	@Autowired
 	private UserService userService;
@@ -60,22 +51,22 @@ public ResponseEntity<?> getAuthInfo() {
 	@Autowired
 	private UserDetailsService userDetailsService;
 
-	@Autowired
-	private PasswordEncoder passwordEncoder;
-
-	/**
-	 * 构造函数注入依赖
-	 */
-	public AuthController(AuthenticationManager authenticationManager, JwtTokenProvider jwtTokenProvider,
-			GuestService guestService) {
-		this.authenticationManager = authenticationManager;
-		this.jwtTokenProvider = jwtTokenProvider;
+	public AuthController(GuestService guestService, JwtTokenProvider jwtTokenProvider,
+			AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder) {
 		this.guestService = guestService;
+		this.jwtTokenProvider = jwtTokenProvider;
+		this.authenticationManager = authenticationManager;
+		this.passwordEncoder = passwordEncoder;
 	}
 
-	/**
-	 * 用户登录
-	 */
+	@GetMapping("/get")
+	public ResponseEntity<?> getAuthInfo() {
+		Map<String, String> response = new HashMap<>();
+		response.put("message", "Auth API root endpoint");
+		response.put("available_endpoints", "/api/auth/login, /api/auth/admin/login, /api/auth/register, /api/auth/admin/register, /api/auth/guest/login");
+		return ResponseEntity.ok(response);
+	}
+
 	@PostMapping("/login")
 	public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
 		String username = request.get("username");
@@ -94,8 +85,7 @@ public ResponseEntity<?> getAuthInfo() {
 
 			// 生成JWT令牌
 			Authentication authentication = authenticationManager.authenticate(
-			    new UsernamePasswordAuthenticationToken(username, password)
-			);
+					new UsernamePasswordAuthenticationToken(username, password));
 			SecurityContextHolder.getContext().setAuthentication(authentication);
 			String jwt = jwtTokenProvider.generateToken(authentication);
 
@@ -113,9 +103,6 @@ public ResponseEntity<?> getAuthInfo() {
 		}
 	}
 
-	/**
-	 * 管理员登录
-	 */
 	@PostMapping("/admin/login")
 	public ResponseEntity<?> adminLogin(@RequestBody Map<String, String> request) {
 		String username = request.get("username");
@@ -128,13 +115,12 @@ public ResponseEntity<?> getAuthInfo() {
 		try {
 			// 验证管理员凭据
 			Authentication authentication = authenticationManager.authenticate(
-			    new UsernamePasswordAuthenticationToken(username, password)
-			);
+					new UsernamePasswordAuthenticationToken(username, password));
 			SecurityContextHolder.getContext().setAuthentication(authentication);
 
 			// 检查是否为管理员角色
 			boolean isAdmin = authentication.getAuthorities().stream()
-			    .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+					.anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
 
 			if (!isAdmin) {
 				log.warn("用户 {} 不是管理员", username);
@@ -159,9 +145,6 @@ public ResponseEntity<?> getAuthInfo() {
 		}
 	}
 
-	/**
-	 * 管理员注册
-	 */
 	@PostMapping("/admin/register")
 	public ResponseEntity<?> adminRegister(@RequestBody Map<String, String> request) {
 		String username = request.get("username");
@@ -175,14 +158,12 @@ public ResponseEntity<?> getAuthInfo() {
 			return ResponseEntity.badRequest().body("用户名和密码不能为空");
 		}
 
-		// 检查用户名是否已存在
 		log.info("检查用户名是否已存在");
 		if (userService.existsByUsername(username)) {
 			log.warn("用户名已存在: {}", username);
 			return ResponseEntity.badRequest().body("用户名已存在");
 		}
 
-		// 注册管理员
 		try {
 			log.info("开始注册管理员");
 			User user = userService.registerUser(username, password, true);
@@ -194,27 +175,18 @@ public ResponseEntity<?> getAuthInfo() {
 		}
 	}
 
-	/**
-	 * 游客登录 (POST)
-	 */
 	@PostMapping("/guest/login")
 	public ResponseEntity<?> guestLogin() {
 		log.info("处理游客登录请求(POST)");
 		return processGuestLogin();
 	}
 
-	/**
-	 * 游客登录 (GET) - 为兼容错误的GET请求而添加
-	 */
 	@GetMapping("/guest/login")
 	public ResponseEntity<?> guestLoginGet() {
 		log.info("处理游客登录请求(GET) - 重定向到POST处理");
 		return processGuestLogin();
 	}
 
-	/**
-	 * 处理游客登录的核心方法
-	 */
 	private ResponseEntity<?> processGuestLogin() {
 		// 生成游客用户名和密码
 		String guestUsername = guestService.generateGuestUsername();
@@ -223,20 +195,17 @@ public ResponseEntity<?> getAuthInfo() {
 		// 保存游客信息到Redis
 		guestService.saveGuestToRedis(guestUsername, guestPassword);
 
-		// 生成JWT令牌
-		String jwt = guestService.generateGuestToken(guestUsername);
+		// 生成访问标识
+		String token = guestService.generateGuestToken(guestUsername);
 
 		Map<String, String> response = new HashMap<>();
-		response.put("token", jwt);
+		response.put("token", token);
 		response.put("type", "Bearer");
 		response.put("message", "游客登录成功，有效期6小时");
 
 		return ResponseEntity.ok(response);
 	}
 
-	/**
-	 * 发送验证码
-	 */
 	@PostMapping("/register/send-code")
 	public ResponseEntity<?> sendVerificationCode(@RequestBody Map<String, String> request) {
 		String username = request.get("username");
@@ -246,27 +215,31 @@ public ResponseEntity<?> getAuthInfo() {
 			return ResponseEntity.badRequest().body("用户名和密码不能为空");
 		}
 
-		// 检查用户名是否已存在
 		if (userService.existsByUsername(username)) {
 			return ResponseEntity.badRequest().body("用户名已存在");
 		}
 
-		// 生成验证码
 		String verificationCode = generateVerificationCode();
 
-		// 存储验证码到Redis，设置1分钟过期
-		String redisKey = "verification_code:" + username;
-		redisTemplate.opsForValue().set(redisKey, verificationCode, 1, TimeUnit.MINUTES);
+		// 计算过期时间（1分钟后）
+		long expirationTime = System.currentTimeMillis() + 60 * 1000;
 
-		// 打印验证码到后端日志
+		// 创建验证码实体并保存到数据库
+		VerificationCode code = new VerificationCode();
+		code.setUsername(username);
+		code.setCode(verificationCode);
+		code.setExpireTime(java.time.LocalDateTime.ofInstant(
+				java.time.Instant.ofEpochMilli(expirationTime),
+				java.time.ZoneId.systemDefault()));
+		code.setCreateTime(java.time.LocalDateTime.now());
+		code.setUpdateTime(java.time.LocalDateTime.now());
+		verificationCodeService.saveVerificationCode(code);
+
 		log.info("用户 {} 的注册验证码: {}", username, verificationCode);
 
 		return ResponseEntity.ok("验证码已发送，有效期1分钟");
 	}
 
-	/**
-	 * 验证验证码并注册
-	 */
 	@PostMapping("/register/verify")
 	public ResponseEntity<?> verifyAndRegister(@RequestBody Map<String, String> request) {
 		String username = request.get("username");
@@ -274,15 +247,16 @@ public ResponseEntity<?> getAuthInfo() {
 		String verificationCode = request.get("verificationCode");
 		Boolean isAdmin = Boolean.valueOf(request.getOrDefault("isAdmin", "false"));
 
-		if (username == null || username.isEmpty() || password == null || password.isEmpty() || verificationCode == null || verificationCode.isEmpty()) {
+		if (username == null || username.isEmpty() || password == null || password.isEmpty()
+				|| verificationCode == null || verificationCode.isEmpty()) {
 			return ResponseEntity.badRequest().body("用户名、密码和验证码不能为空");
 		}
 
 		// 检查验证码是否有效
-		String redisKey = "verification_code:" + username;
-		String storedCode = (String) redisTemplate.opsForValue().get(redisKey);
+		Optional<VerificationCode> storedCodeOptional = verificationCodeService.findByUsername(username);
 
-		if (storedCode == null || !storedCode.equals(verificationCode)) {
+		if (!storedCodeOptional.isPresent() || !storedCodeOptional.get().getCode().equals(verificationCode)
+				|| storedCodeOptional.get().getExpireTime().isBefore(java.time.LocalDateTime.now())) {
 			return ResponseEntity.badRequest().body("验证码无效或已过期");
 		}
 
@@ -290,7 +264,7 @@ public ResponseEntity<?> getAuthInfo() {
 		try {
 			User user = userService.registerUser(username, password, isAdmin);
 			// 注册成功后删除验证码
-			redisTemplate.delete(redisKey);
+			verificationCodeService.deleteVerificationCode(storedCodeOptional.get().getId());
 			return ResponseEntity.ok("注册成功");
 		} catch (RuntimeException e) {
 			return ResponseEntity.badRequest().body(e.getMessage());
@@ -305,4 +279,5 @@ public ResponseEntity<?> getAuthInfo() {
 		int code = 100000 + random.nextInt(900000);
 		return String.valueOf(code);
 	}
+
 }
