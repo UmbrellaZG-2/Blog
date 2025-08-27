@@ -2,6 +2,7 @@ package com.website.backend.controller;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,11 +16,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.website.backend.entity.User;
+import com.website.backend.entity.VerificationCode;
 import com.website.backend.service.GuestService;
 import com.website.backend.service.UserService;
+import com.website.backend.service.VerificationCodeService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @RestController
@@ -37,7 +38,7 @@ public ResponseEntity<?> getAuthInfo() {
 	private final GuestService guestService;
 
 	@Autowired
-	private RedisTemplate<String, Object> redisTemplate;
+	private VerificationCodeService verificationCodeService;
 
 	@Autowired
 	private UserService userService;
@@ -166,8 +167,20 @@ public ResponseEntity<?> getAuthInfo() {
 
 		String verificationCode = generateVerificationCode();
 
-		String redisKey = "verification_code:" + username;
-		redisTemplate.opsForValue().set(redisKey, verificationCode, 1, TimeUnit.MINUTES);
+		// 计算过期时间（1分钟后）
+		long expirationTime = System.currentTimeMillis() + 60 * 1000;
+
+		// 创建验证码实体并保存到数据库
+		VerificationCode code = new VerificationCode();
+		code.setUsername(username);
+		code.setCode(verificationCode);
+		code.setExpireTime(java.time.LocalDateTime.ofInstant(
+		        java.time.Instant.ofEpochMilli(expirationTime),
+		        java.time.ZoneId.systemDefault()
+		));
+		code.setCreateTime(java.time.LocalDateTime.now());
+		code.setUpdateTime(java.time.LocalDateTime.now());
+		verificationCodeService.saveVerificationCode(code);
 
 		log.info("用户 {} 的注册验证码: {}", username, verificationCode);
 
@@ -185,16 +198,18 @@ public ResponseEntity<?> getAuthInfo() {
 			return ResponseEntity.badRequest().body("用户名、密码和验证码不能为空");
 		}
 
-		String redisKey = "verification_code:" + username;
-		String storedCode = (String) redisTemplate.opsForValue().get(redisKey);
+		// 从数据库中获取验证码
+		Optional<VerificationCode> storedCodeOptional = verificationCodeService.findByUsername(username);
 
-		if (storedCode == null || !storedCode.equals(verificationCode)) {
+		if (!storedCodeOptional.isPresent() || !storedCodeOptional.get().getCode().equals(verificationCode) || 
+		    storedCodeOptional.get().getExpireTime().isBefore(java.time.LocalDateTime.now())) {
 			return ResponseEntity.badRequest().body("验证码无效或已过期");
 		}
 
 		try {
 			User user = userService.registerUser(username, password, isAdmin);
-			redisTemplate.delete(redisKey);
+			// 删除已使用的验证码
+			verificationCodeService.deleteVerificationCode(storedCodeOptional.get().getId());
 			return ResponseEntity.ok("注册成功");
 		} catch (RuntimeException e) {
 			return ResponseEntity.badRequest().body(e.getMessage());

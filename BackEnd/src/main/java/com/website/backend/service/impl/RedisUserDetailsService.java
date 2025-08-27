@@ -11,10 +11,10 @@ import org.springframework.stereotype.Service;
 import com.website.backend.entity.Role;
 import com.website.backend.repository.jpa.UserRepository;
 import com.website.backend.repository.jpa.RoleRepository;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.userdetails.User;
 import java.util.List;
-import java.util.Map;
+import com.website.backend.entity.GuestUser;
+import com.website.backend.service.GuestUserService;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -23,8 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 public class RedisUserDetailsService implements UserDetailsService {
 
 	private static final String GUEST_PREFIX = "guest_";
-
-	private static final String REDIS_KEY_PREFIX = "guest:";
 
 	private String maskUsername(String username) {
 		if (username == null) {
@@ -43,21 +41,21 @@ public class RedisUserDetailsService implements UserDetailsService {
 	}
 
 	@Autowired
-	private RedisTemplate<String, Object> redisTemplate;
-
-	@Autowired
 	private UserRepository userRepository;
 
 	@Autowired
 	private RoleRepository roleRepository;
+
+	@Autowired
+	private GuestUserService guestUserService;
 
 	@Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		log.info("尝试加载用户: {}", maskUsername(username));
 
 		if (username.startsWith(GUEST_PREFIX)) {
-			log.info("用户 {} 是游客，尝试从Redis加载", maskUsername(username));
-			return loadGuestUserFromRedis(username);
+			log.info("用户 {} 是游客，尝试从数据库加载", maskUsername(username));
+			return loadGuestUserFromDatabase(username);
 		}
 		else {
 			log.info("用户 {} 是普通用户，尝试从数据库加载", maskUsername(username));
@@ -65,24 +63,17 @@ public class RedisUserDetailsService implements UserDetailsService {
 		}
     }
 
-	private UserDetails loadGuestUserFromRedis(String username) {
-		String redisKey = REDIS_KEY_PREFIX + username;
-		Map<Object, Object> guestInfo = redisTemplate.opsForHash().entries(redisKey);
-
-		if (guestInfo.isEmpty()) {
-			log.warn("游客 {} 在Redis中不存在", maskUsername(username));
-			throw new UsernameNotFoundException("游客不存在: " + username);
-		}
-
-		String password = (String) guestInfo.get("password");
+	private UserDetails loadGuestUserFromDatabase(String username) {
+		GuestUser guestUser = guestUserService.findByUsername(username)
+			.orElseThrow(() -> new UsernameNotFoundException("游客不存在: " + username));
 
 		Role visitorRole = roleRepository.findByName("ROLE_VISITOR")
 			.orElseThrow(() -> new UsernameNotFoundException("游客角色不存在"));
 
 		List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(visitorRole.getName()));
 
-		log.info("成功从Redis加载游客 {}", maskUsername(username));
-		return new User(username, password, authorities);
+		log.info("成功从数据库加载游客 {}", maskUsername(username));
+		return new User(guestUser.getUsername(), guestUser.getPassword(), authorities);
     }
 
 	private UserDetails loadRegularUserFromDatabase(String username) {

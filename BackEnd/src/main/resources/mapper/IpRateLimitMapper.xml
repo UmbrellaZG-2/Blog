@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.website.backend.mapper.IpRateLimitMapper">
+    
+    <resultMap id="BaseResultMap" type="com.website.backend.entity.IpRateLimit">
+        <id column="id" property="id" />
+        <result column="ip_address" property="ipAddress" />
+        <result column="request_count" property="requestCount" />
+        <result column="window_start_time" property="windowStartTime" />
+        <result column="window_end_time" property="windowEndTime" />
+        <result column="is_blocked" property="isBlocked" />
+        <result column="block_end_time" property="blockEndTime" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+    
+    <sql id="Base_Column_List">
+        id, ip_address, request_count, window_start_time, window_end_time, 
+        is_blocked, block_end_time, create_time, update_time
+    </sql>
+    
+    <select id="findByIpAddress" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM ip_rate_limits
+        WHERE ip_address = #{ipAddress}
+    </select>
+    
+    <delete id="deleteExpiredLimits">
+        DELETE FROM ip_rate_limits
+        WHERE window_end_time <= NOW()
+        AND is_blocked = 0
+    </delete>
+</mapper>
