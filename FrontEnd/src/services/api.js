@@ -142,8 +142,8 @@ export const guestLogin = async () => {
 };
 
 // API端点 - 评论相关
-export const addComment = async (articleId, commentData) => {
-  return api.post(`/api/articles/${articleId}/comments/put`, commentData);
+export const addComment = async (articleId, formData) => {
+  return api.post(`/api/articles/${articleId}/comments/put`, formData);
 };
 
 export const getComments = async (articleId) => {

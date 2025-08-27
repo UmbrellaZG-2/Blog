@@ -1,292 +1,266 @@
 package com.website.backend.controller;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.*;
-import com.website.backend.constant.HttpStatusConstants;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import com.website.backend.DTO.ArticleDTO;
+import com.website.backend.DTO.ArticleListDTO;
+import com.website.backend.DTO.ArticleSearchDTO;
+import com.website.backend.DTO.DeleteArticleResponseDTO;
+import com.website.backend.DTO.CommentDTO;
 import com.website.backend.entity.Article;
 import com.website.backend.entity.Comment;
-import com.website.backend.entity.Tag;
+import com.website.backend.exception.ResourceNotFoundException;
 import com.website.backend.model.ApiResponse;
 import com.website.backend.repository.jpa.ArticleRepository;
 import com.website.backend.repository.jpa.CommentRepository;
 import com.website.backend.repository.jpa.TagRepository;
-import com.website.backend.repository.jpa.ArticleTagRepository;
-import com.website.backend.DTO.ArticleDTO;
-import com.website.backend.DTO.ArticleListDTO;
-import com.website.backend.DTO.DeleteArticleResponseDTO;
-import com.website.backend.DTO.ArticleSearchDTO;
 import com.website.backend.util.DTOConverter;
-import com.website.backend.exception.ResourceNotFoundException;
-
-import java.time.LocalDateTime;
-import java.util.*;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/articles")
 public class ArticleController {
 
-    private static final Logger logger = LoggerFactory.getLogger(ArticleController.class);
+	private final ArticleRepository articleRepo;
+	private final CommentRepository commentRepository;
+	private final TagRepository tagRepository;
+	private final DTOConverter dtoConverter;
 
-    private final ArticleRepository articleRepo;
-    private final DTOConverter dtoConverter;
-    private final CommentRepository commentRepository;
-    private final TagRepository tagRepository;
-    private final ArticleTagRepository articleTagRepository;
+	public ArticleController(ArticleRepository articleRepo, CommentRepository commentRepository,
+			TagRepository tagRepository, DTOConverter dtoConverter) {
+		this.articleRepo = articleRepo;
+		this.commentRepository = commentRepository;
+		this.tagRepository = tagRepository;
+		this.dtoConverter = dtoConverter;
+	}
 
-    public ArticleController(ArticleRepository articleRepo, DTOConverter dtoConverter,
-                               CommentRepository commentRepository, TagRepository tagRepository,
-                               ArticleTagRepository articleTagRepository) {
-        this.articleRepo = articleRepo;
-        this.dtoConverter = dtoConverter;
-        this.commentRepository = commentRepository;
-        this.tagRepository = tagRepository;
-        this.articleTagRepository = articleTagRepository;
-    }
+	@GetMapping
+	public ApiResponse<ArticleListDTO> getAllArticles(@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
 
-    // 抽取公共方法处理分页和DTO转换
-    private ArticleListDTO buildArticleListDTO(Page<Article> articlePage) {
-        List<ArticleDTO> articleDTOList = articlePage.getContent()
-                .stream()
-                .map(dtoConverter::convertToDTO)
-                .toList();
+		Pageable pageable = PageRequest.of(page, size);
+		Page<Article> articlePage = articleRepo.findAll(pageable);
 
-        ArticleListDTO articleListDTO = new ArticleListDTO();
-        articleListDTO.setArticles(articleDTOList);
-        articleListDTO.setTotalArticles((int) articlePage.getTotalElements());
-        articleListDTO.setTotalPages(articlePage.getTotalPages());
-        articleListDTO.setCurrentPage(articlePage.getNumber());
-        articleListDTO.setPageSize(articlePage.getSize());
-        return articleListDTO;
-    }
+		ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
+		return ApiResponse.success(articleListDTO);
+	}
 
-    /**
-     * 获取文章列表
-     */
-    @GetMapping
-    public ApiResponse<ArticleListDTO> articles(@RequestParam(defaultValue = "0") int page,
-                                               @RequestParam(defaultValue = "10") int size) {
+	private ArticleListDTO buildArticleListDTO(Page<Article> articlePage) {
+		ArticleListDTO articleListDTO = new ArticleListDTO();
+		articleListDTO.setArticles(articlePage.getContent().stream().map(dtoConverter::convertToDTO)
+				.collect(Collectors.toList()));
+		articleListDTO.setCurrentPage(articlePage.getNumber());
+		articleListDTO.setPageSize(articlePage.getSize());
+		articleListDTO.setTotalElements(articlePage.getTotalElements());
+		articleListDTO.setTotalPages(articlePage.getTotalPages());
+		return articleListDTO;
+	}
 
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Article> articlePage = articleRepo.findAll(pageable);
+	@PostMapping("/search")
+	public ApiResponse<ArticleListDTO> searchArticles(@RequestBody ArticleSearchDTO searchDTO) {
 
-        ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
+		Pageable pageable = PageRequest.of(searchDTO.getPage(), searchDTO.getSize());
+		Page<Article> articlePage;
 
-        return ApiResponse.success(articleListDTO);
-    }
+		if (searchDTO.getCategory() != null && !searchDTO.getCategory().isEmpty()) {
+			articlePage = articleRepo.findByCategoryAndTitleContainingOrContentContaining(searchDTO.getCategory(),
+					searchDTO.getKeyword(), searchDTO.getKeyword(), pageable);
+		}
+		else {
+			articlePage = articleRepo.findByTitleContainingOrContentContaining(searchDTO.getKeyword(),
+					searchDTO.getKeyword(), pageable);
+		}
 
-    /**
-     * 根据文章标题搜索文章
-     */
-    @GetMapping("/search")
-    public ApiResponse<ArticleListDTO> searchArticles(@RequestParam String keyword,
-                                                    @RequestParam(defaultValue = "0") int page,
-                                                    @RequestParam(defaultValue = "10") int size) {
+		ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
+		return ApiResponse.success(articleListDTO);
+	}
 
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Article> articlePage = articleRepo.findByTitleContaining(keyword, pageable);
-        ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
-        return ApiResponse.success(articleListDTO);
-    }
-    
-    /**
-     * 根据文章搜索参数DTO搜索文章（POST方式）
-     */
-    @PostMapping("/search")
-    public ApiResponse<ArticleListDTO> searchArticlesByDTO(@RequestBody ArticleSearchDTO searchDTO) {
-        Pageable pageable = PageRequest.of(searchDTO.getPage(), searchDTO.getSize());
-        Page<Article> articlePage = articleRepo.findByTitleContaining(searchDTO.getKeyword(), pageable);
-        ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
-        return ApiResponse.success(articleListDTO);
-    }
+	@GetMapping("/get/{id}")
+	public ApiResponse<ArticleDTO> articleDetails(@PathVariable Long id) {
 
-    /**
-     * 创建文章（管理员专用）
-     */
-    @PostMapping("/create")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<ArticleDTO> createArticle(@RequestParam String title, @RequestParam String category,
-                                                @RequestParam String content, @RequestParam(defaultValue = "false") boolean isDraft) {
+		Article article = articleRepo.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+		ArticleDTO dto = dtoConverter.convertToDTO(article);
+		return ApiResponse.success(dto);
+	}
 
-        if (title == null || title.trim().isEmpty() || category == null || category.trim().isEmpty() ||
-                content == null || content.trim().isEmpty()) {
-            logger.warn("文章标题、分类或内容不能为空");
-            return ApiResponse.fail(HttpStatusConstants.BAD_REQUEST, "文章标题、分类和内容不能为空");
-        }
+	@GetMapping("/category/get/{category}")
+	public ApiResponse<ArticleListDTO> articlesByCategory(@PathVariable String category,
+			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
 
-        Article article = new Article();
-        article.setTitle(title);
-        article.setCategory(category);
-        article.setContent(content);
-        article.setCreateTime(LocalDateTime.now());
-        article.setUpdateTime(LocalDateTime.now());
-        article.setHasAttachment(false);
-        article.setHasCoverImage(false);
-        article.setDraft(isDraft);
+		Pageable pageable = PageRequest.of(page, size);
+		Page<Article> articlePage = articleRepo.findByCategory(category, pageable);
+		ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
+		return ApiResponse.success(articleListDTO);
+	}
 
-        Article savedArticle = articleRepo.save(article);
-        ArticleDTO dto = dtoConverter.convertToDTO(savedArticle);
+	@PostMapping("/{articleId}/comments/put")
+	public ApiResponse<Comment> addComment(@PathVariable Long articleId, @RequestParam String content,
+			@RequestParam(required = false) Long parentId) {
 
-        return ApiResponse.success(dto);
-    }
+		Article article = articleRepo.findById(articleId)
+				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
 
-    /**
-     * 更新文章（管理员专用）
-     */
-    @PutMapping("/update/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<ArticleDTO> updateArticle(@PathVariable Long id, @RequestParam String title,
-                                                @RequestParam String category, @RequestParam String content,
-                                                @RequestParam(defaultValue = "false") boolean isDraft) {
+		Comment comment = new Comment();
+		comment.setArticleId(articleId);
+		comment.setParentId(parentId);
+		String nickname = "Bro有话说" + UUID.randomUUID().toString().substring(0, 8);
+		comment.setNickname(nickname);
+		comment.setContent(content);
+		comment.setCreateTime(LocalDateTime.now());
 
-        Article article = articleRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+		Comment savedComment = commentRepository.save(comment);
+		return ApiResponse.success(savedComment);
+	}
 
-        if (title == null || title.trim().isEmpty() || category == null || category.trim().isEmpty() ||
-                content == null || content.trim().isEmpty()) {
-            logger.warn("文章标题、分类或内容不能为空");
-            return ApiResponse.fail(HttpStatusConstants.BAD_REQUEST, "文章标题、分类和内容不能为空");
-        }
+	@GetMapping("/{articleId}/comments/get")
+	public ApiResponse<List<CommentDTO>> getArticleComments(@PathVariable Long articleId) {
 
-        article.setTitle(title);
-        article.setCategory(category);
-        article.setContent(content);
-        article.setUpdateTime(LocalDateTime.now());
-        article.setDraft(isDraft);
+		Article article = articleRepo.findById(articleId)
+				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
 
-        Article updatedArticle = articleRepo.save(article);
-        ArticleDTO dto = dtoConverter.convertToDTO(updatedArticle);
-        return ApiResponse.success(dto);
-    }
+		// 获取顶级评论
+		List<Comment> topLevelComments = commentRepository.findByArticleIdAndParentIdIsNull(articleId);
+		
+		// 构建评论树
+		List<CommentDTO> commentDTOs = new ArrayList<>();
+		for (Comment comment : topLevelComments) {
+			CommentDTO commentDTO = convertToCommentDTO(comment);
+			
+			// 获取该评论的所有回复并按时间排序
+			List<Comment> replies = commentRepository.findByParentIdOrderByCreateTimeAsc(comment.getId());
+			List<CommentDTO> replyDTOs = replies.stream()
+					.map(this::convertToCommentDTO)
+					.collect(Collectors.toList());
+			
+			commentDTO.setReplies(replyDTOs);
+			commentDTOs.add(commentDTO);
+		}
+		
+		return ApiResponse.success(commentDTOs);
+	}
 
-    /**
-     * 删除文章（管理员专用）
-     */
-    @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<DeleteArticleResponseDTO> deleteArticle(@PathVariable Long id) {
+	private CommentDTO convertToCommentDTO(Comment comment) {
+		CommentDTO dto = new CommentDTO();
+		dto.setId(comment.getId());
+		dto.setArticleId(comment.getArticleId());
+		dto.setParentId(comment.getParentId());
+		dto.setNickname(comment.getNickname());
+		dto.setContent(comment.getContent());
+		dto.setCreateTime(comment.getCreateTime());
+		dto.setIpAddress(comment.getIpAddress());
+		return dto;
+	}
 
-        Article article = articleRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+	@GetMapping("/categories/get")
+	public ApiResponse<List<String>> getAllCategories() {
 
-        articleRepo.deleteById(id);
+		List<String> categories = articleRepo.findDistinctCategories();
+		return ApiResponse.success(categories);
+	}
 
-        DeleteArticleResponseDTO response = new DeleteArticleResponseDTO();
-        response.setSuccess(true);
-        response.setMessage("文章删除成功");
-        return ApiResponse.success(response);
-    }
+	@PostMapping("/{articleId}/tags/put")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ApiResponse<List<String>> addArticleTags(@PathVariable Long articleId, @RequestBody List<String> tagNames) {
 
-    /**
-     * 文章详情页
-     */
-    @GetMapping("/get/{id}")
-    public ApiResponse<ArticleDTO> articleDetails(@PathVariable Long id) {
+		Article article = articleRepo.findById(articleId)
+				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
 
-        Article article = articleRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
-        ArticleDTO dto = dtoConverter.convertToDTO(article);
-        return ApiResponse.success(dto);
-    }
+		for (String tagName : tagNames) {
+			tagRepository.findByName(tagName).orElseGet(() -> {
+				com.website.backend.entity.Tag tag = new com.website.backend.entity.Tag();
+				tag.setName(tagName);
+				tag.setCreateTime(LocalDateTime.now());
+				return tagRepository.save(tag);
+			});
+		}
 
-    /**
-     * 文章分类页
-     */
-    @GetMapping("/category/get/{category}")
-    public ApiResponse<ArticleListDTO> articlesByCategory(@PathVariable String category,
-                                                        @RequestParam(defaultValue = "0") int page,
-                                                        @RequestParam(defaultValue = "10") int size) {
+		List<com.website.backend.entity.Tag> tags = tagRepository.findByArticleId(articleId);
+		List<String> currentTags = tags.stream().map(com.website.backend.entity.Tag::getName)
+				.collect(Collectors.toList());
+		return ApiResponse.success(currentTags);
+	}
 
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Article> articlePage = articleRepo.findByCategory(category, pageable);
-        ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
-        return ApiResponse.success(articleListDTO);
-    }
+	@DeleteMapping("/{articleId}/tags/delete/{tagName}")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ApiResponse<List<String>> removeArticleTag(@PathVariable Long articleId, @PathVariable String tagName) {
 
-    /**
-     * 添加评论
-     */
-    @PostMapping("/{articleId}/comments/put")
-    public ApiResponse<Comment> addComment(@PathVariable Long articleId, @RequestParam String content,
-                                         @RequestParam(required = false) Long parentId) {
+		Article article = articleRepo.findById(articleId)
+				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
 
-        Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+		tagRepository.findByName(tagName).ifPresent(tag -> {
+			tagRepository.deleteByArticleIdAndTagId(articleId, tag.getId());
+		});
 
-        Comment comment = new Comment();
-        comment.setArticleId(articleId);
-        comment.setParentId(parentId);
-        // 生成固定前缀+UUID的昵称
-        String nickname = "Bro有话说" + UUID.randomUUID().toString().substring(0, 8);
-        comment.setNickname(nickname);
-        comment.setContent(content);
-        comment.setCreateTime(LocalDateTime.now());
+		List<com.website.backend.entity.Tag> tags = tagRepository.findByArticleId(articleId);
+		List<String> currentTags = tags.stream().map(com.website.backend.entity.Tag::getName)
+				.collect(Collectors.toList());
+		return ApiResponse.success(currentTags);
+	}
 
-        Comment savedComment = commentRepository.save(comment);
-        return ApiResponse.success(savedComment);
-    }
+	@PostMapping("/create")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ApiResponse<ArticleDTO> createArticle(@RequestParam String title, @RequestParam String category,
+			@RequestParam String content, @RequestParam(required = false) MultipartFile attachment,
+			@RequestParam(required = false) MultipartFile picture) {
 
-    /**
-     * 获取文章的所有评论
-     */
-    @GetMapping("/{articleId}/comments/get")
-    public ApiResponse<List<Comment>> getArticleComments(@PathVariable Long articleId) {
+		Article article = new Article();
+		article.setTitle(title);
+		article.setCategory(category);
+		article.setContent(content);
+		article.setCreateTime(LocalDateTime.now());
 
-        Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+		Article savedArticle = articleRepo.save(article);
 
-        List<Comment> comments = commentRepository.findByArticleId(articleId);
-        return ApiResponse.success(comments);
-    }
+		ArticleDTO dto = dtoConverter.convertToDTO(savedArticle);
+		return ApiResponse.success(dto);
+	}
 
-    /**
-     * 获取所有分类
-     */
-    @GetMapping("/categories/get")
-    public ApiResponse<List<String>> getAllCategories() {
+	@PutMapping("/update/{id}")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ApiResponse<ArticleDTO> updateArticle(@PathVariable Long id, @RequestParam String title,
+			@RequestParam String category, @RequestParam String content,
+			@RequestParam(required = false) Boolean deleteAttachment,
+			@RequestParam(required = false) Boolean deletePicture,
+			@RequestParam(required = false) MultipartFile attachment,
+			@RequestParam(required = false) MultipartFile picture) {
 
-        List<String> categories = articleRepo.findDistinctCategories();
-        return ApiResponse.success(categories);
-    }
+		Article article = articleRepo.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
 
-    /**
-     * 为文章添加标签
-     */
-    @PostMapping("/{articleId}/tags/put")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<List<String>> addArticleTags(@PathVariable Long articleId, @RequestBody List<String> tagNames) {
+		article.setTitle(title);
+		article.setCategory(category);
+		article.setContent(content);
+		article.setUpdateTime(LocalDateTime.now());
 
-        Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+		Article updatedArticle = articleRepo.save(article);
 
-        for (String tagName : tagNames) {
-            // 查找或创建标签
-            tagRepository.findByName(tagName).orElseGet(() -> {
-                Tag tag = new Tag();
-                tag.setName(tagName);
-                tag.setCreateTime(LocalDateTime.now());
-                return tagRepository.save(tag);
-            });
-        }
+		ArticleDTO dto = dtoConverter.convertToDTO(updatedArticle);
+		return ApiResponse.success(dto);
+	}
 
-        return ApiResponse.success(tagNames);
-    }
+	@DeleteMapping("/delete/{id}")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ApiResponse<DeleteArticleResponseDTO> deleteArticle(@PathVariable Long id) {
 
-    /**
-     * 删除文章的标签
-     */
-    @DeleteMapping("/{articleId}/tags/delete/{tagName}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<String> deleteArticleTag(@PathVariable Long articleId, @PathVariable String tagName) {
+		Article article = articleRepo.findById(id)
+				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
 
-        Article article = articleRepo.findById(articleId).orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
-        Tag tag = tagRepository.findByName(tagName).orElseThrow(() -> new ResourceNotFoundException("标签不存在"));
+		articleRepo.deleteById(id);
 
-        articleTagRepository.deleteByArticleIdAndTagId(articleId, tag.getId());
-
-        // 检查是否还有其他文章使用该标签
-        if (articleTagRepository.findByTagId(tag.getId()).isEmpty()) {
-            tagRepository.delete(tag);
-        }
-
-        return ApiResponse.success("文章标签删除成功");
-    }
+		DeleteArticleResponseDTO response = new DeleteArticleResponseDTO();
+		response.setSuccess(true);
+		response.setMessage("文章删除成功");
+		return ApiResponse.success(response);
+	}
 }

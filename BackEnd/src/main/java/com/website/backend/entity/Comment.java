@@ -45,4 +45,24 @@ public class Comment {
 	@Column(length = 50)
 	private String ipAddress;
 
+	/**
+	 * 重写toString方法，用于显示评论的层级结构
+	 * 
+	 * @return 包含层级缩进的字符串表示
+	 */
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("Comment{");
+		sb.append("id=").append(id);
+		sb.append(", parentId=").append(parentId);
+		sb.append(", articleId=").append(articleId);
+		sb.append(", nickname='").append(nickname).append('\'');
+		sb.append(", content='").append(content).append('\'');
+		sb.append(", createTime=").append(createTime);
+		sb.append(", ipAddress='").append(ipAddress).append('\'');
+		sb.append('}');
+		return sb.toString();
+	}
+
 }

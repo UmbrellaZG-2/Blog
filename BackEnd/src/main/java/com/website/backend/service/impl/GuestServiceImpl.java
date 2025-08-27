@@ -48,7 +48,6 @@ public class GuestServiceImpl implements GuestService {
 	public void saveGuestToRedis(String username, String password) {
 		log.info("保存游客信息到Redis: {}", username);
 
-		// 获取游客角色
 		log.info("开始查询ROLE_VISITOR角色");
 		Optional<Role> visitorRoleOptional = roleRepository.findByName("ROLE_VISITOR");
 		if (!visitorRoleOptional.isPresent()) {
@@ -63,13 +62,11 @@ public class GuestServiceImpl implements GuestService {
 		}
 		Role visitorRole = visitorRoleOptional.orElseThrow(() -> new RuntimeException("游客角色获取失败"));
 
-		// 创建游客信息Map
 		Map<String, Object> guestInfo = new HashMap<>();
 		guestInfo.put("username", username);
-		guestInfo.put("password", password); // 不再加密密码
+		guestInfo.put("password", password);
 		guestInfo.put("role", visitorRole.getName());
 
-		// 存储到Redis并设置过期时间
 		String redisKey = REDIS_KEY_PREFIX + username;
 		redisTemplate.opsForHash().putAll(redisKey, guestInfo);
 		redisTemplate.expire(redisKey, guestExpirationMs, TimeUnit.MILLISECONDS);
@@ -103,13 +100,11 @@ public class GuestServiceImpl implements GuestService {
 
 		log.info("为游客生成访问标识: {}", username);
 
-		// 从Redis获取游客信息
 		Map<String, Object> guestInfo = getGuestFromRedis(username);
 		if (guestInfo.isEmpty()) {
 			throw new RuntimeException("游客信息不存在于Redis");
 		}
 
-		// 返回用户名作为访问标识
 		return username;
 	}
 }

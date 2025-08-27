@@ -26,9 +26,6 @@ import java.util.concurrent.TimeUnit;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-	/**
-	 * 处理/api/auth根路径的GET请求
-	 */
 	@GetMapping("/get")
 public ResponseEntity<?> getAuthInfo() {
 		Map<String, String> response = new HashMap<>();
@@ -48,16 +45,10 @@ public ResponseEntity<?> getAuthInfo() {
 	@Autowired
 	private UserDetailsService userDetailsService;
 
-	/**
-	 * 构造函数注入依赖
-	 */
 	public AuthController(GuestService guestService) {
 		this.guestService = guestService;
 	}
 
-	/**
-	 * 用户登录
-	 */
 	@PostMapping("/login")
 	public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
 		String username = request.get("username");
@@ -68,9 +59,7 @@ public ResponseEntity<?> getAuthInfo() {
 		}
 
 		try {
-			// 验证用户凭据
 			UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-			// 注意：由于移除了权限控制，这里不再验证密码
 
 			Map<String, String> response = new HashMap<>();
 			response.put("message", "登录成功");
@@ -84,9 +73,6 @@ public ResponseEntity<?> getAuthInfo() {
 		}
 	}
 
-	/**
-	 * 管理员登录
-	 */
 	@PostMapping("/admin/login")
 	public ResponseEntity<?> adminLogin(@RequestBody Map<String, String> request) {
 		String username = request.get("username");
@@ -97,9 +83,6 @@ public ResponseEntity<?> getAuthInfo() {
 		}
 
 		try {
-			// 验证管理员凭据
-			// 注意：由于移除了权限控制，这里不再验证密码和角色
-
 			Map<String, String> response = new HashMap<>();
 			response.put("message", "管理员登录成功");
 
@@ -110,9 +93,6 @@ public ResponseEntity<?> getAuthInfo() {
 		}
 	}
 
-	/**
-	 * 管理员注册
-	 */
 	@PostMapping("/admin/register")
 	public ResponseEntity<?> adminRegister(@RequestBody Map<String, String> request) {
 		String username = request.get("username");
@@ -126,14 +106,12 @@ public ResponseEntity<?> getAuthInfo() {
 			return ResponseEntity.badRequest().body("用户名和密码不能为空");
 		}
 
-		// 检查用户名是否已存在
 		log.info("检查用户名是否已存在");
 		if (userService.existsByUsername(username)) {
 			log.warn("用户名已存在: {}", username);
 			return ResponseEntity.badRequest().body("用户名已存在");
 		}
 
-		// 注册管理员
 		try {
 			log.info("开始注册管理员");
 			User user = userService.registerUser(username, password, true);
@@ -145,36 +123,24 @@ public ResponseEntity<?> getAuthInfo() {
 		}
 	}
 
-	/**
-	 * 游客登录 (POST)
-	 */
 	@PostMapping("/guest/login")
 	public ResponseEntity<?> guestLogin() {
 		log.info("处理游客登录请求(POST)");
 		return processGuestLogin();
 	}
 
-	/**
-	 * 游客登录 (GET) - 为兼容错误的GET请求而添加
-	 */
 	@GetMapping("/guest/login")
 	public ResponseEntity<?> guestLoginGet() {
 		log.info("处理游客登录请求(GET) - 重定向到POST处理");
 		return processGuestLogin();
 	}
 
-	/**
-	 * 处理游客登录的核心方法
-	 */
 	private ResponseEntity<?> processGuestLogin() {
-		// 生成游客用户名和密码
 		String guestUsername = guestService.generateGuestUsername();
 		String guestPassword = "guest_password";
 
-		// 保存游客信息到Redis
 		guestService.saveGuestToRedis(guestUsername, guestPassword);
 
-		// 生成访问标识
 		String token = guestService.generateGuestToken(guestUsername);
 
 		Map<String, String> response = new HashMap<>();
@@ -185,9 +151,6 @@ public ResponseEntity<?> getAuthInfo() {
 		return ResponseEntity.ok(response);
 	}
 
-	/**
-	 * 发送验证码
-	 */
 	@PostMapping("/register/send-code")
 	public ResponseEntity<?> sendVerificationCode(@RequestBody Map<String, String> request) {
 		String username = request.get("username");
@@ -197,27 +160,20 @@ public ResponseEntity<?> getAuthInfo() {
 			return ResponseEntity.badRequest().body("用户名和密码不能为空");
 		}
 
-		// 检查用户名是否已存在
 		if (userService.existsByUsername(username)) {
 			return ResponseEntity.badRequest().body("用户名已存在");
 		}
 
-		// 生成验证码
 		String verificationCode = generateVerificationCode();
 
-		// 存储验证码到Redis，设置1分钟过期
 		String redisKey = "verification_code:" + username;
 		redisTemplate.opsForValue().set(redisKey, verificationCode, 1, TimeUnit.MINUTES);
 
-		// 打印验证码到后端日志
 		log.info("用户 {} 的注册验证码: {}", username, verificationCode);
 
 		return ResponseEntity.ok("验证码已发送，有效期1分钟");
 	}
 
-	/**
-	 * 验证验证码并注册
-	 */
 	@PostMapping("/register/verify")
 	public ResponseEntity<?> verifyAndRegister(@RequestBody Map<String, String> request) {
 		String username = request.get("username");
@@ -229,7 +185,6 @@ public ResponseEntity<?> getAuthInfo() {
 			return ResponseEntity.badRequest().body("用户名、密码和验证码不能为空");
 		}
 
-		// 检查验证码是否有效
 		String redisKey = "verification_code:" + username;
 		String storedCode = (String) redisTemplate.opsForValue().get(redisKey);
 
@@ -237,10 +192,8 @@ public ResponseEntity<?> getAuthInfo() {
 			return ResponseEntity.badRequest().body("验证码无效或已过期");
 		}
 
-		// 注册用户
 		try {
 			User user = userService.registerUser(username, password, isAdmin);
-			// 注册成功后删除验证码
 			redisTemplate.delete(redisKey);
 			return ResponseEntity.ok("注册成功");
 		} catch (RuntimeException e) {
@@ -248,9 +201,6 @@ public ResponseEntity<?> getAuthInfo() {
 		}
 	}
 
-	/**
-	 * 生成6位数字验证码
-	 */
 	private String generateVerificationCode() {
 		Random random = new Random();
 		int code = 100000 + random.nextInt(900000);

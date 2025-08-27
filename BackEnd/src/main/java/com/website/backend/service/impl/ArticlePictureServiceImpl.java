@@ -32,7 +32,6 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 
 	@Override
 	public ArticlePicture uploadPicture(MultipartFile file, Article article) throws IOException {
-		// 验证图片格式
 		String fileName = file.getOriginalFilename();
 		String contentType = file.getContentType();
 
@@ -44,7 +43,6 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 			throw new IOException("文件内容类型不符合要求，只支持JPG和PNG格式的图片");
 		}
 
-		// 创建图片信息实体
 		ArticlePicture picture = new ArticlePicture();
 		picture.setFileName(file.getOriginalFilename());
 		picture.setFileType(file.getContentType());
@@ -52,25 +50,20 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 		picture.setUploadTime(LocalDateTime.now());
 		picture.setArticle(article);
 
-		// 保存图片信息到数据库
 		ArticlePicture savedPicture = articlePictureRepository.save(picture);
 
-		// 获取文件存储路径
 		String storagePath = fileStorageConfig.getArticlePictureStoragePath();
 
-		// 生成唯一文件名
 		String originalFilename = file.getOriginalFilename();
 		String cleanedFileName = originalFilename != null ? StringUtils.cleanPath(originalFilename) : "";
 		String uniqueFileName = savedPicture.getPictureId() + "_" + cleanedFileName;
 		String filePath = storagePath + File.separator + uniqueFileName;
 
-		// 保存文件到本地文件系统
 		try {
 			File destinationFile = new File(filePath);
 			file.transferTo(destinationFile);
 			log.info("Image uploaded to file system: {}", filePath);
 
-			// 更新图片实体中的文件路径
 			savedPicture.setFilePath(filePath);
 			return articlePictureRepository.save(savedPicture);
 		}
@@ -82,7 +75,6 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 
 	@Override
 	public byte[] downloadPicture(Long pictureId) throws IOException {
-		// 从数据库获取图片信息
 		Optional<ArticlePicture> pictureOptional = articlePictureRepository.findById(pictureId);
 		if (pictureOptional.isEmpty()) {
 			throw new IOException("Picture not found with id: " + pictureId);
@@ -95,7 +87,6 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 			throw new IOException("Picture file path not found for id: " + pictureId);
 		}
 
-		// 从文件系统读取图片内容
 		File file = new File(filePath);
 		if (!file.exists()) {
 			throw new IOException("Picture file not found: " + filePath);
@@ -106,13 +97,11 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 
 	@Override
 	public void deletePicture(Long pictureId) {
-		// 从数据库获取图片信息
 		Optional<ArticlePicture> pictureOptional = articlePictureRepository.findById(pictureId);
 		if (pictureOptional.isPresent()) {
 			ArticlePicture picture = pictureOptional.get();
 			String filePath = picture.getFilePath();
 
-			// 从文件系统删除图片
 			if (filePath != null && !filePath.isEmpty()) {
 				File file = new File(filePath);
 				if (file.exists()) {
@@ -126,7 +115,6 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 				}
 			}
 
-			// 从数据库删除图片信息
 			articlePictureRepository.deleteById(pictureId);
 			log.info("Image information deleted from database: {}", pictureId);
 		}
@@ -137,12 +125,10 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 
 	@Override
 	public void deletePictureByArticle(Article article) {
-		// 从数据库获取图片信息
 		ArticlePicture picture = getPictureByArticle(article);
 		if (picture != null) {
 			String filePath = picture.getFilePath();
 
-			// 从文件系统删除图片
 			if (filePath != null && !filePath.isEmpty()) {
 				File file = new File(filePath);
 				if (file.exists()) {
@@ -156,7 +142,6 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 				}
 			}
 
-			// 从数据库删除图片信息
 			articlePictureRepository.deleteByArticle(article);
 			log.info("Image information deleted from database for article: {}", article.getId());
 		}

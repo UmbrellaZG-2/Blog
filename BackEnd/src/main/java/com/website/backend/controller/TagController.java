@@ -20,9 +20,6 @@ public class TagController {
         this.tagRepository = tagRepository;
     }
 
-    /**
-	 * 获取所有标签接口
-	 */
 	@GetMapping("/get")
 	public ApiResponse<List<String>> getAllTags() {
         List<Tag> tags = tagRepository.findAll();

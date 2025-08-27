@@ -60,7 +60,6 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // 公开接口 - 无需认证
                 .requestMatchers(HttpMethod.GET, "/api/articles").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/articles/search").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/articles/get/**").permitAll()
@@ -82,7 +81,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/images/article/*/getAll").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/tags/get").permitAll()
                 
-                // 管理员接口 - 需要认证
                 .requestMatchers(HttpMethod.POST, "/api/articles/create").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/articles/update/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/articles/delete/**").hasRole("ADMIN")
@@ -94,12 +92,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/images/article/*/cover/update").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/images/article/*/cover/delete").hasRole("ADMIN")
                 
-                // 隐藏接口 - 特殊处理
-                .requestMatchers(HttpMethod.POST, "/api/auth/admin/register").permitAll() // 实际在控制器中限制访问
-                .requestMatchers(HttpMethod.POST, "/api/auth/register/send-code").permitAll() // 实际在控制器中限制访问
-                .requestMatchers(HttpMethod.POST, "/api/auth/register/verify").permitAll() // 实际在控制器中限制访问
+                .requestMatchers(HttpMethod.POST, "/api/auth/admin/register").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/register/send-code").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/register/verify").permitAll()
                 
-                // 其他所有请求拒绝访问
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
@@ -107,21 +103,16 @@ public class SecurityConfig {
         return http.build();
     }
 
-	/**
-	 * 请求日志过滤器，用于记录请求详细信息
-	 */
 	@Bean
 	public OncePerRequestFilter requestLoggingFilter() {
 		return new OncePerRequestFilter() {
 			@Override
 			protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
 					throws ServletException, IOException {
-				// 包装请求以缓存请求体
 				ContentCachingRequestWrapper wrappedRequest = new ContentCachingRequestWrapper(request);
 				
 				log.info("接收到请求: {} {}", wrappedRequest.getMethod(), wrappedRequest.getRequestURI());
 				
-				// 记录请求头
 				Enumeration<String> headerNames = wrappedRequest.getHeaderNames();
 				StringBuilder headers = new StringBuilder();
 				while (headerNames.hasMoreElements()) {
@@ -129,14 +120,12 @@ public class SecurityConfig {
 					headers.append(headerName).append(": ").append(wrappedRequest.getHeader(headerName)).append(", ");
 				}
 				if (headers.length() > 0) {
-					headers.setLength(headers.length() - 2); // 移除最后一个逗号和空格
+					headers.setLength(headers.length() - 2);
 				}
 				log.info("请求头: {}", headers.toString());
 				
-				// 记录请求参数（URL参数）
 				log.info("请求参数: {}", wrappedRequest.getParameterMap());
 				
-				// 记录请求体（如果是POST请求且内容类型是JSON）
 				if ("POST".equals(wrappedRequest.getMethod()) &&
 						wrappedRequest.getContentType() != null &&
 						wrappedRequest.getContentType().contains("application/json")) {
@@ -149,7 +138,6 @@ public class SecurityConfig {
 				
 				log.info("请求IP: {}", wrappedRequest.getRemoteAddr());
 
-				// 继续过滤链
 				filterChain.doFilter(wrappedRequest, response);
 
 				log.info("请求处理完成: {} {}，状态码: {}", wrappedRequest.getMethod(), wrappedRequest.getRequestURI(), response.getStatus());

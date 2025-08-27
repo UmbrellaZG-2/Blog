@@ -37,7 +37,6 @@ public class AttachmentServiceImpl implements AttachmentService {
 
 	@Override
 	public Attachment uploadAttachment(MultipartFile file, Article article) throws IOException {
-		// 检查附件数量限制
 		int maxAttachCount = getMaxAttachmentCount();
 		int currentAttachCount = getCurrentAttachmentCount(article);
 
@@ -46,7 +45,6 @@ public class AttachmentServiceImpl implements AttachmentService {
 			throw new IOException("附件数量超过限制，最多可上传" + maxAttachCount + "个附件");
 		}
 
-		// 验证附件格式
 		String fileName = file.getOriginalFilename();
 
 		if (fileName == null) {
@@ -62,14 +60,11 @@ public class AttachmentServiceImpl implements AttachmentService {
 		String fileType = file.getContentType();
 		Long fileSize = file.getSize();
 
-		// 获取文件存储路径
 		String storagePath = fileStorageConfig.getAttachmentStoragePath();
 
-		// 生成唯一文件名
 		String uniqueFileName = UUID.randomUUID().toString() + "_" + StringUtils.cleanPath(fileName);
 		String filePath = storagePath + File.separator + uniqueFileName;
 
-		// 保存文件到本地文件系统
 		try {
 			File destinationFile = new File(filePath);
 			file.transferTo(destinationFile);
@@ -80,7 +75,6 @@ public class AttachmentServiceImpl implements AttachmentService {
 			throw new IOException("Could not upload attachment file", e);
 		}
 
-		// 创建附件实体并保存到数据库
 		Attachment attachment = new Attachment();
 		attachment.setFileName(fileName);
 		attachment.setFilePath(filePath);
@@ -97,7 +91,6 @@ public class AttachmentServiceImpl implements AttachmentService {
 	@Override
 	public byte[] downloadAttachment(Long attachmentId) throws IOException {
 		log.info("开始下载附件,附件ID: {}", attachmentId);
-		// 从数据库获取附件信息
 		Attachment attachment = attachmentRepository.findById(attachmentId).orElseThrow(() -> {
 			log.error("附件不存在,附件ID: {}", attachmentId);
 			return new IOException("Attachment not found");
@@ -108,7 +101,6 @@ public class AttachmentServiceImpl implements AttachmentService {
 			throw new IOException("Attachment file path not found for id: " + attachmentId);
 		}
 
-		// 从文件系统读取附件内容
 		File file = new File(filePath);
 		if (!file.exists()) {
 			throw new IOException("Attachment file not found: " + filePath);
@@ -120,7 +112,6 @@ public class AttachmentServiceImpl implements AttachmentService {
 	@Override
 	public void deleteAttachment(Long attachmentId) {
 		log.info("开始删除附件,附件ID: {}", attachmentId);
-		// 从数据库获取附件信息
 		Attachment attachment = attachmentRepository.findById(attachmentId).orElseThrow(() -> {
 			log.error("附件不存在,附件ID: {}", attachmentId);
 			return new RuntimeException("Attachment not found");
@@ -128,7 +119,6 @@ public class AttachmentServiceImpl implements AttachmentService {
 
 		String filePath = attachment.getFilePath();
 
-		// 从文件系统删除附件
 		if (filePath != null && !filePath.isEmpty()) {
 			File file = new File(filePath);
 			if (file.exists()) {
@@ -142,13 +132,11 @@ public class AttachmentServiceImpl implements AttachmentService {
 			}
 		}
 
-		// 从数据库删除附件记录
 		attachmentRepository.delete(attachment);
 		log.info("从数据库删除附件记录成功,附件ID: {}", attachmentId);
 	}
 
 	private int getMaxAttachmentCount() {
-		// 从数据库中获取最大附件数量配置
 		Optional<SystemConfig> configOptional = systemConfigRepository.findByConfigKey("MaxAttachCount");
 		if (configOptional.isPresent()) {
 			try {
@@ -161,27 +149,22 @@ public class AttachmentServiceImpl implements AttachmentService {
 		else {
 			log.warn("未找到MaxAttachCount配置，使用默认值10");
 		}
-		// 默认值
 		return 5;
 	}
 
 	private int getCurrentAttachmentCount(Article article) {
-		// 获取当前文章的附件数量
 		return attachmentRepository.countByArticle(article);
 	}
 
 	@Override
 	public void deleteAttachmentsByArticle(Article article) {
 		log.info("开始删除文章相关的所有附件,文章ID: {}", article.getId());
-		// 获取文章相关的所有附件
 		java.util.List<Attachment> attachments = attachmentRepository.findByArticle(article);
 		log.info("找到{}个与文章相关的附件", attachments.size());
 
-		// 从文件系统和数据库删除每个附件
 		for (Attachment attachment : attachments) {
 			String filePath = attachment.getFilePath();
 
-			// 从文件系统删除附件
 			if (filePath != null && !filePath.isEmpty()) {
 				File file = new File(filePath);
 				if (file.exists()) {
@@ -195,7 +178,6 @@ public class AttachmentServiceImpl implements AttachmentService {
 				}
 			}
 
-			// 从数据库删除附件记录
 			attachmentRepository.delete(attachment);
 			log.info("从数据库删除附件记录成功,附件ID: {}", attachment.getAttachmentId());
 		}

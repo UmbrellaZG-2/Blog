@@ -22,12 +22,6 @@ public class UserServiceImpl implements UserService {
 
 	private final PasswordEncoder passwordEncoder;
 
-	/**
-	 * 构造函数注入依赖
-	 * @param userRepository 用户仓库
-	 * @param roleRepository 角色仓库
-	 * @param passwordEncoder 密码编码器
-	 */
 	public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository,
 			PasswordEncoder passwordEncoder) {
 		this.userRepository = userRepository;
@@ -40,28 +34,18 @@ public User registerUser(String username, String password) {
 	return registerUser(username, password, false);
 }
 
-/**
- * 注册用户，可以指定是否为管理员
- * @param username 用户名
- * @param password 密码
- * @param isAdmin 是否为管理员
- * @return 注册后的用户
- */
 public User registerUser(String username, String password, boolean isAdmin) {
 	log.info("开始注册用户: {}", username);
-	// 检查用户名是否已存在
 	if (userRepository.existsByUsername(username)) {
 		log.error("用户名已存在: {}", username);
 		throw new RuntimeException("用户名已存在: " + username);
 	}
 
-	// 创建新用户
 	User user = new User();
 	user.setUsername(username);
 	user.setPassword(passwordEncoder.encode(password));
 	log.info("用户信息创建完成: {}", username);
 
-	// 设置用户角色
 	Set<Role> roles = new HashSet<>();
 	if (isAdmin) {
 		Role adminRole = roleRepository.findByName("ROLE_ADMIN").orElseThrow(() -> {

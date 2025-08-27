@@ -26,26 +26,18 @@ public class RedisUserDetailsService implements UserDetailsService {
 
 	private static final String REDIS_KEY_PREFIX = "guest:";
 
-	/**
-	 * 掩码用户名，保护用户隐私
-	 * @param username 原始用户名
-	 * @return 掩码后的用户名
-	 */
 	private String maskUsername(String username) {
 		if (username == null) {
 			return null;
 		}
 
 		if (username.startsWith(GUEST_PREFIX)) {
-			// 游客用户保留前缀，掩码后面部分
 			return GUEST_PREFIX + "***";
 		}
 		else if (username.length() <= 3) {
-			// 短用户名全部掩码
 			return "***";
 		}
 		else {
-			// 普通用户显示前3个字符，其余掩码
 			return username.substring(0, 3) + "***";
 		}
 	}
@@ -63,7 +55,6 @@ public class RedisUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		log.info("尝试加载用户: {}", maskUsername(username));
 
-		// 检查是否是游客用户
 		if (username.startsWith(GUEST_PREFIX)) {
 			log.info("用户 {} 是游客，尝试从Redis加载", maskUsername(username));
 			return loadGuestUserFromRedis(username);
@@ -85,7 +76,6 @@ public class RedisUserDetailsService implements UserDetailsService {
 
 		String password = (String) guestInfo.get("password");
 
-		// 获取游客角色
 		Role visitorRole = roleRepository.findByName("ROLE_VISITOR")
 			.orElseThrow(() -> new UsernameNotFoundException("游客角色不存在"));
 
