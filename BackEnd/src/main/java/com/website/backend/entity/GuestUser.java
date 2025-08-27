@@ -1,17 +1,16 @@
 package com.website.backend.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("guest_users")
-public class GuestUser {
+public class GuestUser implements Serializable {
 
-    @TableId(type = IdType.ASSIGN_UUID)
+    private static final long serialVersionUID = 1L;
+
     private String id;
+    // 注意：UUID生成需要在代码中手动处理，MyBatis不会自动生成
 
     private String username;
     

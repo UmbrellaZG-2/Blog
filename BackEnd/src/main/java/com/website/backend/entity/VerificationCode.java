@@ -1,17 +1,13 @@
 package com.website.backend.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("verification_codes")
 public class VerificationCode {
 
-    @TableId(type = IdType.AUTO)
     private Long id;
+    // 注意：自增ID需要在数据库中设置，MyBatis不会自动处理
 
     private String username;
     

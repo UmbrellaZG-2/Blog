@@ -14,7 +14,5 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
 	
 	@Query("SELECT t FROM Tag t JOIN ArticleTag at ON t.id = at.tagId WHERE at.articleId = ?1")
 	List<Tag> findByArticleId(Long articleId);
-	
-	void deleteByArticleIdAndTagId(Long articleId, Long tagId);
 
 }

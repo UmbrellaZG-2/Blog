@@ -1,9 +1,19 @@
 import axios from 'axios';
 import config from '@/config';
 
+// 确定当前环境
+const Environment = {
+  DEVELOPMENT: 'development',
+  PRODUCTION: 'production'
+};
+
+// 获取当前环境配置
+const currentEnv = process.env.NODE_ENV || Environment.DEVELOPMENT;
+const envConfig = config[currentEnv] || config.development;
+
 // 创建axios实例
 const api = axios.create({
-  baseURL: config.API_BASE_URL,
+  baseURL: envConfig.API_BASE_URL,
   timeout: 10000,
 });
 

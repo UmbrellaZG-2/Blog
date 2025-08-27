@@ -4,6 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.website.backend.mapper.IpRateLimitMapper">
     
+    <!-- 保留resultMap供注解方式的SQL使用 -->
     <resultMap id="BaseResultMap" type="com.website.backend.entity.IpRateLimit">
         <id column="id" property="id" />
         <result column="ip_address" property="ipAddress" />
@@ -20,17 +21,5 @@
         id, ip_address, request_count, window_start_time, window_end_time, 
         is_blocked, block_end_time, create_time, update_time
     </sql>
-    
-    <select id="findByIpAddress" resultMap="BaseResultMap">
-        SELECT
-        <include refid="Base_Column_List" />
-        FROM ip_rate_limits
-        WHERE ip_address = #{ipAddress}
-    </select>
-    
-    <delete id="deleteExpiredLimits">
-        DELETE FROM ip_rate_limits
-        WHERE window_end_time <= NOW()
-        AND is_blocked = 0
-    </delete>
+
 </mapper>

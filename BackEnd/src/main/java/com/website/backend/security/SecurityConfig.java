@@ -55,12 +55,12 @@ public class SecurityConfig {
 	public CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowedOrigins(List.of(
+			"http://101.200.43.186:8081", 
 			"http://101.200.43.186:8082", 
-			"http://101.200.43.186:8083", 
-			"http://localhost:8082", 
-			"http://localhost:8083",
+			"http://101.200.43.186:8083",
 			"http://localhost:8081",
-			"http://101.200.43.186:8081"));
+			"http://localhost:8082", 
+			"http://localhost:8083"));
 		configuration.addAllowedMethod("*");
 		configuration.addAllowedHeader("*");
 		configuration.setAllowCredentials(true);
@@ -74,6 +74,7 @@ public class SecurityConfig {
 	@Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/api/articles").permitAll()
@@ -115,7 +116,6 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(jwtExceptionHandlerFilter, JwtAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         
         return http.build();

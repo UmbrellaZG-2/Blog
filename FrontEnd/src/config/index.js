@@ -11,6 +11,4 @@ const config = {
   }
 };
 
-// 根据环境变量获取配置
-const env = process.env.NODE_ENV || 'development';
-export default config[env];
+export default config;

@@ -1,6 +1,5 @@
 package com.website.backend.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.website.backend.entity.GuestUser;
 import com.website.backend.mapper.GuestUserMapper;
 import com.website.backend.service.GuestUserService;
@@ -25,19 +24,14 @@ public class GuestUserServiceImpl implements GuestUserService {
 
     @Override
     public Optional<GuestUser> findByUsername(String username) {
-        QueryWrapper<GuestUser> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("username", username);
-        queryWrapper.gt("expire_time", LocalDateTime.now());
-        GuestUser guestUser = guestUserMapper.selectOne(queryWrapper);
-        return Optional.ofNullable(guestUser);
+        // 使用原生MyBatis方法
+        return guestUserMapper.findByUsername(username);
     }
 
     @Override
     public boolean existsByUsername(String username) {
-        QueryWrapper<GuestUser> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("username", username);
-        queryWrapper.gt("expire_time", LocalDateTime.now());
-        return guestUserMapper.selectCount(queryWrapper) > 0;
+        // 直接调用findByUsername并检查是否存在
+        return guestUserMapper.findByUsername(username).isPresent();
     }
 
     @Override

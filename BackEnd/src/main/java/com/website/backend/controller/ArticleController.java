@@ -17,6 +17,7 @@ import com.website.backend.model.ApiResponse;
 import com.website.backend.repository.jpa.ArticleRepository;
 import com.website.backend.repository.jpa.CommentRepository;
 import com.website.backend.repository.jpa.TagRepository;
+import com.website.backend.repository.jpa.ArticleTagRepository;
 import com.website.backend.util.DTOConverter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -34,13 +35,15 @@ public class ArticleController {
 	private final ArticleRepository articleRepo;
 	private final CommentRepository commentRepository;
 	private final TagRepository tagRepository;
+	private final ArticleTagRepository articleTagRepository;
 	private final DTOConverter dtoConverter;
 
 	public ArticleController(ArticleRepository articleRepo, CommentRepository commentRepository,
-			TagRepository tagRepository, DTOConverter dtoConverter) {
+			TagRepository tagRepository, ArticleTagRepository articleTagRepository, DTOConverter dtoConverter) {
 		this.articleRepo = articleRepo;
 		this.commentRepository = commentRepository;
 		this.tagRepository = tagRepository;
+		this.articleTagRepository = articleTagRepository;
 		this.dtoConverter = dtoConverter;
 	}
 
@@ -199,7 +202,7 @@ public class ArticleController {
 				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
 
 		tagRepository.findByName(tagName).ifPresent(tag -> {
-			tagRepository.deleteByArticleIdAndTagId(articleId, tag.getId());
+			articleTagRepository.deleteByArticleIdAndTagId(articleId, tag.getId());
 		});
 
 		List<com.website.backend.entity.Tag> tags = tagRepository.findByArticleId(articleId);

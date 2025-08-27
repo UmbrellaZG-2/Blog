@@ -3,31 +3,20 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.website.backend.mapper.GuestUserMapper">
-    
+
+    <!-- 保留resultMap供注解方式的SQL使用 -->
     <resultMap id="BaseResultMap" type="com.website.backend.entity.GuestUser">
-        <id column="id" property="id" />
-        <result column="username" property="username" />
-        <result column="password" property="password" />
-        <result column="role" property="role" />
-        <result column="expire_time" property="expireTime" />
-        <result column="create_time" property="createTime" />
-        <result column="update_time" property="updateTime" />
+        <id column="id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="password" property="password"/>
+        <result column="role" property="role"/>
+        <result column="expire_time" property="expireTime"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
     </resultMap>
-    
+
     <sql id="Base_Column_List">
         id, username, password, role, expire_time, create_time, update_time
     </sql>
-    
-    <select id="findByUsername" resultMap="BaseResultMap">
-        SELECT
-        <include refid="Base_Column_List" />
-        FROM guest_users
-        WHERE username = #{username}
-        AND expire_time > NOW()
-    </select>
-    
-    <delete id="deleteExpiredGuests">
-        DELETE FROM guest_users
-        WHERE expire_time <= NOW()
-    </delete>
+
 </mapper>

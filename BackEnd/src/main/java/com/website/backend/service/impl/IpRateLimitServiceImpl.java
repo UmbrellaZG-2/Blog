@@ -1,6 +1,5 @@
 package com.website.backend.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.website.backend.entity.IpRateLimit;
 import com.website.backend.mapper.IpRateLimitMapper;
 import com.website.backend.service.IpRateLimitService;
@@ -30,16 +29,14 @@ public class IpRateLimitServiceImpl implements IpRateLimitService {
 
     @Override
     public Optional<IpRateLimit> findByIpAddress(String ipAddress) {
-        QueryWrapper<IpRateLimit> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("ip_address", ipAddress);
-        IpRateLimit ipRateLimit = ipRateLimitMapper.selectOne(queryWrapper);
-        return Optional.ofNullable(ipRateLimit);
+        // 使用原生MyBatis方法
+        return ipRateLimitMapper.findByIpAddress(ipAddress);
     }
 
     @Override
     public void updateIpRateLimit(IpRateLimit ipRateLimit) {
         ipRateLimit.setUpdateTime(LocalDateTime.now());
-        ipRateLimitMapper.updateById(ipRateLimit);
+        ipRateLimitMapper.update(ipRateLimit);
     }
 
     @Override

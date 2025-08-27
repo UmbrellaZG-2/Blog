@@ -22,16 +22,12 @@ const plugins = isProdEnv
     ? [react(), prodHtmlTransformer(CHAT_VARIABLE)]
     : [react()]
   : [
-      devLogger({
-        dirname: resolve(tmpdir(), '.nocode-dev-logs'),
-        maxFiles: '3d',
-      }),
-      react(),
-      devHtmlTransformer(CHAT_VARIABLE),
+      react()
+      // 禁用NoCode相关插件以避免localhost域名检测问题
     ];
 
-// https://vitejs.dev/config/
-export default defineConfig({
+// 开发环境配置为简单的React应用，不需要NoCode运行时
+const devConfig = {
   server: {
     host: '::',
     port: '8082',
@@ -46,14 +42,11 @@ export default defineConfig({
   },
   resolve: {
     alias: [
-      {
-        find: '@',
-        replacement: fileURLToPath(new URL('./src', import.meta.url)),
-      },
-      {
-        find: 'lib',
-        replacement: resolve(__dirname, 'lib'),
-      },
+      { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
+      { find: 'lib', replacement: resolve(__dirname, 'lib') },
     ],
   },
-});
+};
+
+// https://vitejs.dev/config/
+export default defineConfig(devConfig);

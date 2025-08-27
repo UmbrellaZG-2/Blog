@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,7 +23,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.util.AntPathMatcher;
 
 @Component
-public class JwtAuthenticationFilter extends OncePerRequestFilter {
+public class JwtAuthenticationFilter extends OncePerRequestFilter implements Ordered {
 
 	private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
@@ -58,7 +59,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			"/api/tags/*"
 	);
 
+	private static final int FILTER_ORDER = Ordered.HIGHEST_PRECEDENCE + 2; // 在JwtExceptionHandlerFilter之后执行
 	private final AntPathMatcher pathMatcher = new AntPathMatcher();
+
+	@Override
+	public int getOrder() {
+		return FILTER_ORDER;
+	}
 
 	public JwtAuthenticationFilter(JwtTokenProvider tokenProvider, UserDetailsService userDetailsService) {
 		this.tokenProvider = tokenProvider;
