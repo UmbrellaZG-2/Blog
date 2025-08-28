@@ -26,7 +26,6 @@ public interface GuestUserMapper {
     int deleteById(String id);
     
     // 自定义查询方法
+    @Select("SELECT * FROM guest_users WHERE username = #{username}")
     Optional<GuestUser> findByUsername(String username);
-    
-    int deleteExpiredGuests();
 }

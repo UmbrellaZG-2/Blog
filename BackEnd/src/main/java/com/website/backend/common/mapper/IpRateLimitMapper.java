@@ -26,7 +26,6 @@ public interface IpRateLimitMapper {
     int deleteById(Long id);
     
     // 自定义查询方法
+    @Select("SELECT * FROM ip_rate_limit WHERE ip_address = #{ipAddress}")
     Optional<IpRateLimit> findByIpAddress(String ipAddress);
-    
-    int deleteExpiredLimits();
 }

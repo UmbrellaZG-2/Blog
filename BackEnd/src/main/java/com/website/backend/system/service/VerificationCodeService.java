@@ -17,17 +17,7 @@ public interface VerificationCodeService {
     boolean validateCode(String email, String code);
 
     /**
-     * 发送验证邮件
-     */
-    void sendVerificationEmail(String to, String code) throws Exception;
-
-    /**
      * 删除验证码
      */
-    void deleteVerificationCode(Long id);
-
-    /**
-     * 删除过期的验证码
-     */
-    void deleteExpiredCodes();
+    void deleteVerificationCode(String email);
 }

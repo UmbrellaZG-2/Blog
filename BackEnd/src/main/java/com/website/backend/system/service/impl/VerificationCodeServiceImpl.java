@@ -1,74 +1,59 @@
 package com.website.backend.system.service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import com.website.backend.system.service.VerificationCodeService;
-import com.website.backend.system.entity.VerificationCode;
-import com.website.backend.system.repository.VerificationCodeRepository;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class VerificationCodeServiceImpl implements VerificationCodeService {
 
     @Autowired
-    private VerificationCodeRepository verificationCodeRepository;
-
-    @Autowired
-    private JavaMailSender mailSender;
+    private RedisTemplate<String, String> redisTemplate;
 
     private final Random random = new Random();
+    
+    // 验证码过期时间（分钟）
+    private static final long CODE_EXPIRE_MINUTES = 5;
+    
+    // Redis中验证码的key前缀
+    private static final String VERIFICATION_CODE_PREFIX = "verification:code:";
 
     @Override
     public String generateCode(String email) {
+        // 生成6位数字验证码
         String code = String.format("%06d", random.nextInt(999999));
-        VerificationCode verificationCode = new VerificationCode();
-        verificationCode.setEmail(email);
-        verificationCode.setCode(code);
-        verificationCode.setExpiryDate(LocalDateTime.now().plusMinutes(5));
-        verificationCodeRepository.save(verificationCode);
+        
+        // 将验证码存储到Redis中，设置过期时间
+        String key = VERIFICATION_CODE_PREFIX + email;
+        redisTemplate.opsForValue().set(key, code, CODE_EXPIRE_MINUTES, TimeUnit.MINUTES);
+        
+        System.out.println("Generated verification code for email " + email + ": " + code);
+        
         return code;
     }
 
     @Override
     public boolean validateCode(String email, String code) {
-        Optional<VerificationCode> verificationCode = verificationCodeRepository.findByEmailAndCode(email, code);
-        if (verificationCode.isPresent()) {
-            VerificationCode vc = verificationCode.get();
-            if (vc.getExpiryDate().isAfter(LocalDateTime.now())) {
-                verificationCodeRepository.delete(vc);
-                return true;
-            } else {
-                verificationCodeRepository.delete(vc);
-            }
+        String key = VERIFICATION_CODE_PREFIX + email;
+        String storedCode = redisTemplate.opsForValue().get(key);
+        
+        if (storedCode != null && storedCode.equals(code)) {
+            // 验证成功后删除验证码
+            redisTemplate.delete(key);
+            return true;
         }
+        
         return false;
     }
 
     @Override
-    public void sendVerificationEmail(String to, String code) throws MessagingException {
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true);
-        helper.setTo(to);
-        helper.setSubject("验证码");
-        helper.setText("您的验证码是: " + code + "，有效期5分钟", true);
-        mailSender.send(message);
-    }
-
-    @Override
-    public void deleteVerificationCode(Long id) {
-        verificationCodeRepository.deleteById(id);
-    }
-
-    @Override
-    public void deleteExpiredCodes() {
-        verificationCodeRepository.deleteByExpiryDateBefore(LocalDateTime.now());
+    public void deleteVerificationCode(String email) {
+        String key = VERIFICATION_CODE_PREFIX + email;
+        redisTemplate.delete(key);
     }
 }

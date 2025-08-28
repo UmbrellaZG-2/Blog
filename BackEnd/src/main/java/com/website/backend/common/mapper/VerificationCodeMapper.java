@@ -26,7 +26,6 @@ public interface VerificationCodeMapper {
     int deleteById(String id);
     
     // 自定义查询方法
+    @Select("SELECT * FROM verification_code WHERE username = #{username}")
     Optional<VerificationCode> findByUsername(String username);
-    
-    int deleteExpiredCodes();
 }

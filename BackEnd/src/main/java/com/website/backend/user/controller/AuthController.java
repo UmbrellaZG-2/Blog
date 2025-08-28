@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.website.backend.user.entity.User;
-import com.website.backend.system.entity.VerificationCode;
 import com.website.backend.common.exception.ResourceNotFoundException;
 import com.website.backend.common.security.JwtTokenProvider;
 import com.website.backend.system.service.GuestService;
@@ -204,75 +203,46 @@ public class AuthController {
 
 	@PostMapping("/register/send-code")
 	public ResponseEntity<?> sendVerificationCode(@RequestBody Map<String, String> request) {
-		String username = request.get("username");
-		String password = request.get("password");
+		String email = request.get("email");
 
-		if (username == null || username.isEmpty() || password == null || password.isEmpty()) {
-			return ResponseEntity.badRequest().body("用户名和密码不能为空");
+		if (email == null || email.isEmpty()) {
+			return ResponseEntity.badRequest().body("邮箱不能为空");
 		}
 
-		if (userService.existsByUsername(username)) {
-			return ResponseEntity.badRequest().body("用户名已存在");
-		}
+		String verificationCode = verificationCodeService.generateCode(email);
 
-		String verificationCode = generateVerificationCode();
+		log.info("用户 {} 的注册验证码已生成并存储到Redis中", email);
 
-		// 计算过期时间（1分钟后）
-		long expirationTime = System.currentTimeMillis() + 60 * 1000;
-
-		// 创建验证码实体并保存到数据库
-		VerificationCode code = new VerificationCode();
-		code.setEmail(username);
-		code.setCode(verificationCode);
-		code.setExpiryDate(java.time.LocalDateTime.ofInstant(
-				java.time.Instant.ofEpochMilli(expirationTime),
-				java.time.ZoneId.systemDefault()));
-		code.setCreateTime(java.time.LocalDateTime.now());
-		code.setUpdateTime(java.time.LocalDateTime.now());
-		verificationCodeService.generateCode(username);
-
-		log.info("用户 {} 的注册验证码: {}", username, verificationCode);
-
-		return ResponseEntity.ok("验证码已发送，有效期1分钟");
+		return ResponseEntity.ok("验证码已发送，有效期5分钟");
 	}
 
 	@PostMapping("/register/verify")
 	public ResponseEntity<?> verifyAndRegister(@RequestBody Map<String, String> request) {
-		String username = request.get("username");
+		String email = request.get("email");
 		String password = request.get("password");
 		String verificationCode = request.get("verificationCode");
 		Boolean isAdmin = Boolean.valueOf(request.getOrDefault("isAdmin", "false"));
 
-		if (username == null || username.isEmpty() || password == null || password.isEmpty()
+		if (email == null || email.isEmpty() || password == null || password.isEmpty()
 				|| verificationCode == null || verificationCode.isEmpty()) {
-			return ResponseEntity.badRequest().body("用户名、密码和验证码不能为空");
+			return ResponseEntity.badRequest().body("邮箱、密码和验证码不能为空");
 		}
 
 		// 检查验证码是否有效
-		String storedCode = verificationCodeService.generateCode(username);
+		boolean isValid = verificationCodeService.validateCode(email, verificationCode);
 
-		if (!storedCode.equals(verificationCode)) {
+		if (!isValid) {
 			return ResponseEntity.badRequest().body("验证码无效或已过期");
 		}
 
 		// 注册用户
 		try {
-			User user = userService.registerUser(username, password, isAdmin);
-			// 注册成功后删除验证码
-			// verificationCodeService.deleteVerificationCode(storedCodeOptional.get().getId());
+			User user = userService.registerUser(email, password, isAdmin);
 		} catch (RuntimeException e) {
 			return ResponseEntity.badRequest().body(e.getMessage());
 		}
 		return ResponseEntity.ok("注册成功");
 	}
 
-	/**
-	 * 生成6位数字验证码
-	 */
-	private String generateVerificationCode() {
-		Random random = new Random();
-		int code = 100000 + random.nextInt(900000);
-		return String.valueOf(code);
-	}
 
 }
