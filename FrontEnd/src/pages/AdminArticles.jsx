@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Edit, Trash2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getArticles, deleteArticle } from '@/services/api';
+import { getArticles, deleteArticle, addArticleTags, deleteArticleTag } from '@/services/api';
 
 const AdminArticles = () => {
   const navigate = useNavigate();
@@ -29,6 +29,34 @@ const AdminArticles = () => {
   const handleEdit = (id) => {
     // 实际应用中会跳转到编辑页面
     toast.info(`编辑文章 ID: ${id}`);
+  };
+
+  const handleAddTag = async (articleId, tagName) => {
+    try {
+      const response = await addArticleTags(articleId, [tagName]);
+      if (response.success) {
+        queryClient.invalidateQueries(['adminArticles']);
+        toast.success('标签添加成功');
+      } else {
+        toast.error(`添加标签失败：${response.message}`);
+      }
+    } catch (error) {
+      toast.error(`添加标签失败：${error.message}`);
+    }
+  };
+
+  const handleDeleteTag = async (articleId, tagName) => {
+    try {
+      const response = await deleteArticleTag(articleId, tagName);
+      if (response.success) {
+        queryClient.invalidateQueries(['adminArticles']);
+        toast.success('标签删除成功');
+      } else {
+        toast.error(`删除标签失败：${response.message}`);
+      }
+    } catch (error) {
+      toast.error(`删除标签失败：${error.message}`);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -132,7 +160,7 @@ const AdminArticles = () => {
                                 variant="destructive" 
                                 size="sm" 
                                 className="absolute -top-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
-                                onClick={() => toast.info(`删除标签: ${tag}`)}
+                                onClick={() => handleDeleteTag(article.id, tag)}
                               >
                                 删除
                               </Button>
@@ -142,7 +170,12 @@ const AdminArticles = () => {
                             variant="outline" 
                             size="sm" 
                             className="h-5 px-1 text-xs"
-                            onClick={() => toast.info('添加新标签')}
+                            onClick={() => {
+                              const tagName = prompt('请输入新标签名称:');
+                              if (tagName && tagName.trim()) {
+                                handleAddTag(article.id, tagName.trim());
+                              }
+                            }}
                           >
                             +
                           </Button>

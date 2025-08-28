@@ -5,7 +5,7 @@
 <mapper namespace="com.website.backend.mapper.VerificationCodeMapper">
     
     <!-- 保留resultMap供注解方式的SQL使用 -->
-    <resultMap id="BaseResultMap" type="com.website.backend.entity.VerificationCode">
+    <resultMap id="BaseResultMap" type="com.website.backend.system.entity.VerificationCode">
         <id column="id" property="id" />
         <result column="username" property="username" />
         <result column="code" property="code" />

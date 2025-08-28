@@ -5,7 +5,7 @@
 <mapper namespace="com.website.backend.mapper.IpRateLimitMapper">
     
     <!-- 保留resultMap供注解方式的SQL使用 -->
-    <resultMap id="BaseResultMap" type="com.website.backend.entity.IpRateLimit">
+    <resultMap id="BaseResultMap" type="com.website.backend.system.entity.IpRateLimit">
         <id column="id" property="id" />
         <result column="ip_address" property="ipAddress" />
         <result column="request_count" property="requestCount" />
