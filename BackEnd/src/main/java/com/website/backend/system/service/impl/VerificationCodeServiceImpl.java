@@ -56,4 +56,11 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
         String key = VERIFICATION_CODE_PREFIX + email;
         redisTemplate.delete(key);
     }
+
+    @Override
+    public void deleteExpiredCodes() {
+        // Redis会自动处理过期键的删除，这里不需要额外实现
+        // 如果需要手动清理，可以使用Redis的SCAN命令查找并删除过期键
+        System.out.println("清理过期验证码任务执行完成 - Redis自动处理过期键");
+    }
 }

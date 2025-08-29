@@ -8,7 +8,8 @@ import com.website.backend.article.dto.CommentDTO;
 import com.website.backend.comment.entity.Comment;
 import com.website.backend.comment.repository.CommentRepository;
 import com.website.backend.comment.service.CommentService;
-import com.website.backend.common.exception.ResourceNotFoundException;
+
+import com.website.backend.comment.exception.CommentNotFoundException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -40,7 +41,7 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public CommentDTO updateComment(Long id, CommentDTO commentDTO) {
         Comment existingComment = commentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Comment not found with id: " + id));
+                .orElseThrow(() -> new CommentNotFoundException(id.toString()));
         
         existingComment.setContent(commentDTO.getContent());
         existingComment.setNickname(commentDTO.getAuthor());
@@ -53,7 +54,7 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public void deleteComment(Long id) {
         if (!commentRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Comment not found with id: " + id);
+            throw new CommentNotFoundException(id.toString());
         }
         commentRepository.deleteById(id);
     }
@@ -61,7 +62,7 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public CommentDTO getCommentById(Long id) {
         Comment comment = commentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Comment not found with id: " + id));
+                .orElseThrow(() -> new CommentNotFoundException(id.toString()));
         return convertToDTO(comment);
     }
 

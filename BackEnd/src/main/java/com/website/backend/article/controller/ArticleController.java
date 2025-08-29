@@ -12,7 +12,7 @@ import com.website.backend.article.dto.DeleteArticleResponseDTO;
 import com.website.backend.article.dto.CommentDTO;
 import com.website.backend.article.entity.Article;
 import com.website.backend.comment.entity.Comment;
-import com.website.backend.common.exception.ResourceNotFoundException;
+import com.website.backend.article.exception.ArticleNotFoundException;
 import com.website.backend.common.model.ApiResponse;
 import com.website.backend.article.repository.ArticleRepository;
 import com.website.backend.comment.repository.CommentRepository;
@@ -96,7 +96,7 @@ public class ArticleController {
 	public ApiResponse<ArticleDTO> articleDetails(@PathVariable Long id) {
 
 		Article article = articleRepo.findById(id)
-				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+				.orElseThrow(() -> new ArticleNotFoundException(id.toString()));
 		ArticleDTO dto = dtoConverter.convertToDTO(article);
 		return ApiResponse.success(dto);
 	}
@@ -116,9 +116,9 @@ public class ArticleController {
 			@RequestParam(required = false) Long parentId) {
 
 		Article article = articleRepo.findById(articleId)
-				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+				.orElseThrow(() -> new ArticleNotFoundException(articleId.toString()));
 
-		// 过滤敏感�?
+		// 过滤敏感词
 		String filteredContent = sensitiveWordFilterService.filter(content);
 
 		Comment comment = new Comment();
@@ -140,9 +140,9 @@ public class ArticleController {
 	@PreAuthorize("hasRole('ADMIN')")
 	public ApiResponse<CommentDTO> updateComment(@PathVariable Long commentId, @RequestParam String content) {
 		Comment comment = commentRepository.findById(commentId)
-				.orElseThrow(() -> new ResourceNotFoundException("评论不存在"));
+				.orElseThrow(() -> new ArticleNotFoundException("评论不存在，ID: " + commentId));
 
-		// 过滤敏感�?
+		// 过滤敏感词
 		String filteredContent = sensitiveWordFilterService.filter(content);
 		comment.setContent(filteredContent);
 
@@ -158,7 +158,7 @@ public class ArticleController {
 	@PreAuthorize("hasRole('ADMIN')")
 	public ApiResponse<String> deleteComment(@PathVariable Long commentId) {
 		Comment comment = commentRepository.findById(commentId)
-				.orElseThrow(() -> new ResourceNotFoundException("评论不存在"));
+				.orElseThrow(() -> new ArticleNotFoundException("评论不存在，ID: " + commentId));
 
 		// 如果是父评论，需要先删除所有回�?
 		if (comment.getParentId() == null) {
@@ -174,7 +174,7 @@ public class ArticleController {
 	public ApiResponse<List<CommentDTO>> getArticleComments(@PathVariable Long articleId) {
 
 		Article article = articleRepo.findById(articleId)
-				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+				.orElseThrow(() -> new ArticleNotFoundException(articleId.toString()));
 
 		// 获取顶级评论
 		List<Comment> topLevelComments = commentRepository.findByArticleIdAndParentIdIsNull(articleId);
@@ -221,7 +221,7 @@ public class ArticleController {
 	public ApiResponse<List<String>> addArticleTags(@PathVariable Long articleId, @RequestBody List<String> tagNames) {
 
 		Article article = articleRepo.findById(articleId)
-				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+				.orElseThrow(() -> new ArticleNotFoundException(articleId.toString()));
 
 		for (String tagName : tagNames) {
 			tagRepository.findByName(tagName).orElseGet(() -> {
@@ -243,7 +243,7 @@ public class ArticleController {
 	public ApiResponse<List<String>> removeArticleTag(@PathVariable Long articleId, @PathVariable String tagName) {
 
 		Article article = articleRepo.findById(articleId)
-				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+				.orElseThrow(() -> new ArticleNotFoundException(articleId.toString()));
 
 		tagRepository.findByName(tagName).ifPresent(tag -> {
 			articleTagRepository.deleteByArticleIdAndTagId(articleId, tag.getId());
@@ -283,7 +283,7 @@ public class ArticleController {
 			@RequestParam(required = false) MultipartFile picture) {
 
 		Article article = articleRepo.findById(id)
-				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+				.orElseThrow(() -> new ArticleNotFoundException(id.toString()));
 
 		article.setTitle(title);
 		article.setCategory(category);
@@ -301,7 +301,7 @@ public class ArticleController {
 	public ApiResponse<DeleteArticleResponseDTO> deleteArticle(@PathVariable Long id) {
 
 		Article article = articleRepo.findById(id)
-				.orElseThrow(() -> new ResourceNotFoundException("文章不存在"));
+				.orElseThrow(() -> new ArticleNotFoundException(id.toString()));
 
 		articleRepo.deleteById(id);
 

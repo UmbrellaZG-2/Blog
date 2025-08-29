@@ -1,9 +1,5 @@
 package com.website.backend.system.service;
 
-import com.website.backend.system.entity.VerificationCode;
-
-import java.util.Optional;
-
 public interface VerificationCodeService {
 
     /**
@@ -20,4 +16,9 @@ public interface VerificationCodeService {
      * 删除验证码
      */
     void deleteVerificationCode(String email);
+
+    /**
+     * 删除过期验证码
+     */
+    void deleteExpiredCodes();
 }

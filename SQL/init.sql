@@ -20,8 +20,8 @@ CREATE TABLE IF NOT EXISTS user_roles (
                                           user_id BIGINT NOT NULL,
                                           role_id BIGINT NOT NULL,
                                           PRIMARY KEY (user_id, role_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (role_id) REFERENCES roles(id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
     );
 
 -- 文章表
@@ -55,16 +55,18 @@ CREATE TABLE IF NOT EXISTS article_tags (
                                             id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                             article_id BIGINT NOT NULL,
                                             tag_id BIGINT NOT NULL,
-                                            FOREIGN KEY (article_id) REFERENCES articles(id),
-    FOREIGN KEY (tag_id) REFERENCES tags(id)
+                                            FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
     );
 
 -- 文章点赞表
 CREATE TABLE IF NOT EXISTS article_likes (
                                              id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                             article_id CHAR(36) NOT NULL,
+                                             article_id BIGINT NOT NULL,
     user_id BIGINT,
-    create_time TIMESTAMP NOT NULL
+    create_time TIMESTAMP NOT NULL,
+    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
 -- 评论表
@@ -76,7 +78,8 @@ CREATE TABLE IF NOT EXISTS comments (
     content TEXT NOT NULL,
     create_time TIMESTAMP NOT NULL,
     update_time TIMESTAMP,
-    ip_address VARCHAR(50)
+    ip_address VARCHAR(50),
+    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
     );
 
 -- 附件表
@@ -88,7 +91,7 @@ CREATE TABLE IF NOT EXISTS attachments (
     file_size BIGINT,
     upload_time TIMESTAMP,
     article_id BIGINT NOT NULL,
-    FOREIGN KEY (article_id) REFERENCES articles(id)
+    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
     );
 
 -- 文章图片表
@@ -101,7 +104,7 @@ CREATE TABLE IF NOT EXISTS article_pictures (
     upload_time TIMESTAMP,
     article_id BIGINT NOT NULL,
     is_cover BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (article_id) REFERENCES articles(id)
+    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
     );
 
 -- 访客用户表
@@ -144,11 +147,12 @@ CREATE TABLE IF NOT EXISTS tb_cfg_system (
 -- 验证码表
 CREATE TABLE IF NOT EXISTS verification_codes (
                                                   id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                                  email VARCHAR(255),
-    code VARCHAR(255),
-    expiry_date TIMESTAMP,
-    create_time TIMESTAMP,
-    update_time TIMESTAMP
+                                                  email VARCHAR(255) NOT NULL,
+    code VARCHAR(255) NOT NULL,
+    expiry_date TIMESTAMP NOT NULL,
+    create_time TIMESTAMP NOT NULL,
+    update_time TIMESTAMP NOT NULL,
+    UNIQUE KEY unique_email_code (email, code)
     );
 
 -- 插入基础角色数据

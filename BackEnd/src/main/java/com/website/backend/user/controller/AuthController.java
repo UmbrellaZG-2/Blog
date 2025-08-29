@@ -23,7 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.website.backend.user.entity.User;
-import com.website.backend.common.exception.ResourceNotFoundException;
+
+import com.website.backend.user.exception.UserNotFoundException;
 import com.website.backend.common.security.JwtTokenProvider;
 import com.website.backend.system.service.GuestService;
 import com.website.backend.user.service.UserService;
@@ -117,7 +118,7 @@ public class AuthController {
 
 			if (!isAdmin) {
 				log.warn("用户 {} 不是管理员", username);
-			throw new ResourceNotFoundException("用户不是管理员");
+			throw new UserNotFoundException(username);
 			}
 
 			String jwt = jwtTokenProvider.generateToken(authentication);
@@ -128,7 +129,7 @@ public class AuthController {
 			response.put("message", "管理员登录成功");
 
 			return ResponseEntity.ok(response);
-		} catch (ResourceNotFoundException e) {
+		} catch (UserNotFoundException e) {
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
 		} catch (UsernameNotFoundException e) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("用户不存在");

@@ -14,7 +14,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -71,14 +70,7 @@ public class GlobalExceptionHandler {
 		return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "服务器内部错�? " + e.getMessage(), errorInfo);
 	}
 
-	@ExceptionHandler(ResourceNotFoundException.class)
-	@ResponseStatus(HttpStatus.NOT_FOUND)
-	public ApiResponse<?> handleResourceNotFound(ResourceNotFoundException e) {
-		logger.error("资源不存�? {}", e.getMessage());
-		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", "RESOURCE_NOT_FOUND");
-		return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage(), errorInfo);
-	}
+
 
 	// 处理权限不足异常
 	@ExceptionHandler(AccessDeniedException.class)

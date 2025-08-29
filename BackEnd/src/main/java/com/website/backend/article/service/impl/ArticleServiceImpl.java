@@ -7,7 +7,7 @@ import com.website.backend.article.repository.ArticleRepository;
 import com.website.backend.article.service.ArticleService;
 import com.website.backend.file.service.AttachmentService;
 import com.website.backend.file.service.ArticlePictureService;
-import com.website.backend.common.exception.ResourceNotFoundException;
+
 import com.website.backend.file.exception.FileProcessingException;
 import com.website.backend.common.exception.ArticleNotFoundException;
 import com.website.backend.common.exception.DraftNotFoundException;
