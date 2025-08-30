@@ -39,19 +39,19 @@ public class GuestServiceImpl implements GuestService {
 
     @Override
     public void saveGuestToRedis(String username, String password) {
-        log.info("保存游客信息到数据库: {}", username);
+        log.debug("保存游客信息到数据库: {}", username);
 
-        log.info("开始查询ROLE_VISITOR角色");
+        log.debug("开始查询ROLE_VISITOR角色");
         Optional<Role> visitorRoleOptional = roleRepository.findByName("ROLE_VISITOR");
         if (!visitorRoleOptional.isPresent()) {
             log.warn("游客角色不存在，正在创建ROLE_VISITOR角色");
             Role visitorRole = new Role();
             visitorRole.setName("ROLE_VISITOR");
             visitorRole = roleRepository.save(visitorRole);
-            log.info("已创建ROLE_VISITOR角色: {}", visitorRole.getName());
+            log.debug("已创建ROLE_VISITOR角色: {}", visitorRole.getName());
             visitorRoleOptional = Optional.of(visitorRole);
         } else {
-            log.info("成功查询到ROLE_VISITOR角色");
+            log.debug("成功查询到ROLE_VISITOR角色");
         }
         Role visitorRole = visitorRoleOptional.orElseThrow(() -> new RuntimeException("游客角色获取失败"));
 
@@ -73,7 +73,7 @@ public class GuestServiceImpl implements GuestService {
         // 保存到数据库
         guestUserService.saveGuestUser(guestUser);
 
-        log.info("游客信息已保存到数据库，过期时间: {}毫秒", guestExpirationMs);
+        log.debug("游客信息已保存到数据库，过期时间: {}毫秒", guestExpirationMs);
     }
 
     @Override

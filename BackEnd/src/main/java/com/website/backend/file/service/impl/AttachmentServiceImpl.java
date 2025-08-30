@@ -56,7 +56,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 			throw new IOException("只支持7Z、ZIP和RAR格式的压缩文件");
 		}
 
-		log.info("开始上传附件，文件名: {}, 文章ID: {}", fileName, article.getId());
+		log.debug("开始上传附件，文件名: {}, 文章ID: {}", fileName, article.getId());
 		String fileType = file.getContentType();
 		Long fileSize = file.getSize();
 
@@ -68,7 +68,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 		try {
 			File destinationFile = new File(filePath);
 			file.transferTo(destinationFile);
-			log.info("附件上传到文件系统成功: {}", filePath);
+			log.debug("附件上传到文件系统成功: {}", filePath);
 		}
 		catch (IOException e) {
 			log.error("附件上传到文件系统失败: {}", e.getMessage());
@@ -84,13 +84,13 @@ public class AttachmentServiceImpl implements AttachmentService {
 		attachment.setArticle(article);
 
 		Attachment savedAttachment = attachmentRepository.save(attachment);
-		log.info("附件信息保存到数据库成功，附件ID: {}", savedAttachment.getAttachmentId());
+		log.debug("附件信息保存到数据库成功，附件ID: {}", savedAttachment.getAttachmentId());
 		return savedAttachment;
 	}
 
 	@Override
 	public byte[] downloadAttachment(Long attachmentId) throws IOException {
-		log.info("开始下载附件，附件ID: {}", attachmentId);
+		log.debug("开始下载附件，附件ID: {}", attachmentId);
 		Attachment attachment = attachmentRepository.findById(attachmentId).orElseThrow(() -> {
 			log.error("附件不存在，附件ID: {}", attachmentId);
 			return new IOException("Attachment not found");
@@ -111,7 +111,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 
 	@Override
 	public void deleteAttachment(Long attachmentId) {
-		log.info("开始删除附件，附件ID: {}", attachmentId);
+		log.debug("开始删除附件，附件ID: {}", attachmentId);
 		Attachment attachment = attachmentRepository.findById(attachmentId).orElseThrow(() -> {
 			log.error("附件不存在，附件ID: {}", attachmentId);
 			return new RuntimeException("Attachment not found");
@@ -124,7 +124,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 			if (file.exists()) {
 				boolean deleted = file.delete();
 				if (deleted) {
-					log.info("从文件系统删除附件成功: {}", filePath);
+					log.debug("从文件系统删除附件成功: {}", filePath);
 				}
 				else {
 					log.warn("从文件系统删除附件失败: {}", filePath);
@@ -133,7 +133,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 		}
 
 		attachmentRepository.delete(attachment);
-		log.info("从数据库删除附件记录成功,附件ID: {}", attachmentId);
+		log.debug("从数据库删除附件记录成功,附件ID: {}", attachmentId);
 	}
 
 	private int getMaxAttachmentCount() {

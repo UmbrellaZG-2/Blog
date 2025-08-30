@@ -152,14 +152,16 @@ public class AuthController {
 			return ResponseEntity.badRequest().body("用户名和密码不能为空");
 		}
 
-		log.info("检查用户名是否已存在");
+		// 检查用户名是否已存在
+		log.debug("检查用户名是否已存在");
 		if (userService.existsByUsername(username)) {
 			log.warn("用户名已存在: {}", username);
 			return ResponseEntity.badRequest().body("用户名已存在");
 		}
 
+		// 注册管理员
 		try {
-			log.info("开始注册管理员");
+			log.debug("开始注册管理员");
 			User user = userService.registerUser(username, password, true);
 			log.info("管理员注册成功，用户名: {}", username);
 			return ResponseEntity.ok("管理员注册成功");
@@ -212,7 +214,7 @@ public class AuthController {
 
 		String verificationCode = verificationCodeService.generateCode(email);
 
-		log.info("用户 {} 的注册验证码已生成并存储到Redis中", email);
+		log.debug("用户 {} 的注册验证码已生成并存储到Redis中", email);
 
 		return ResponseEntity.ok("验证码已发送，有效期5分钟");
 	}

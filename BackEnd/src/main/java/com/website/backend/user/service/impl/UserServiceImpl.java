@@ -42,21 +42,21 @@ public User registerUser(String username, String password) {
 }
 
 public User registerUser(String username, String password, boolean isAdmin) {
-	log.info("开始注册用户: {}", username);
+	log.debug("开始注册用户: {}", username);
 	
 	// 参数验证
 	validateUsername(username);
 	validatePassword(password);
 	
 	if (userRepository.existsByUsername(username)) {
-		log.error("用户名已存在: {}", username);
+		log.warn("用户名已存在: {}", username);
 		throw new BusinessException("用户名已存在: " + username, "USER_EXISTS", null);
 	}
 
 	User user = new User();
 	user.setUsername(username);
 	user.setPassword(passwordEncoder.encode(password));
-	log.info("用户信息创建完成: {}", username);
+	log.debug("用户信息创建完成: {}", username);
 
 	Set<Role> roles = new HashSet<>();
 	if (isAdmin) {
@@ -65,7 +65,7 @@ public User registerUser(String username, String password, boolean isAdmin) {
 			return new BusinessException("角色不存在: ROLE_ADMIN", "ROLE_NOT_FOUND", null);
 		});
 		roles.add(adminRole);
-		log.info("用户 {} 被设置为管理员角色", username);
+		log.debug("用户 {} 被设置为管理员角色", username);
 	} else {
 		Role visitorRole = roleRepository.findByName("ROLE_VISITOR").orElseThrow(() -> {
 			log.error("角色不存在: ROLE_VISITOR");
@@ -74,7 +74,7 @@ public User registerUser(String username, String password, boolean isAdmin) {
 		roles.add(visitorRole);
 	}
 	user.setRoles(roles);
-	log.info("用户角色设置完成: {}, 角色: {}", username, roles);
+	log.debug("用户角色设置完成: {}, 角色: {}", username, roles);
 
 	User savedUser = userRepository.save(user);
 	log.info("用户注册成功: {}", savedUser.getUsername());
@@ -83,14 +83,14 @@ public User registerUser(String username, String password, boolean isAdmin) {
 
 	@Override
 	public Optional<User> findByUsername(String username) {
-		log.info("查询用户: {}", username);
+		log.debug("查询用户: {}", username);
 		return userRepository.findByUsername(username);
 	}
 
 	@Override
 	public boolean existsByUsername(String username) {
 		boolean exists = userRepository.existsByUsername(username);
-		log.info("检查用户是否存在: {}, 结果: {}", username, exists);
+		log.debug("检查用户是否存在: {}, 结果: {}", username, exists);
 		return exists;
 	}
 	

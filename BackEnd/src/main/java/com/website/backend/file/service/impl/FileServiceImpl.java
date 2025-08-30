@@ -44,37 +44,37 @@ public class FileServiceImpl implements FileService {
     
     @Override
     public String uploadAttachment(MultipartFile file, Article article) throws IOException {
-        log.info("通过统一文件服务上传附件，文章ID: {}", article.getId());
+        log.debug("通过统一文件服务上传附件，文章ID: {}", article.getId());
         Attachment attachment = attachmentService.uploadAttachment(file, article);
         return attachment.getFilePath();
     }
     
     @Override
     public String uploadImage(MultipartFile file, Article article) throws IOException {
-        log.info("通过统一文件服务上传图片，文章ID: {}", article.getId());
+        log.debug("通过统一文件服务上传图片，文章ID: {}", article.getId());
         ArticlePicture articlePicture = articlePictureService.uploadPicture(file, article);
         return articlePicture.getFilePath();
     }
     
     @Override
     public byte[] downloadAttachment(Long fileId) throws IOException {
-        log.info("通过统一文件服务下载附件，文件ID: {}", fileId);
+        log.debug("通过统一文件服务下载附件，文件ID: {}", fileId);
         return attachmentService.downloadAttachment(fileId);
     }
     
     @Override
     public void deleteAttachment(Long fileId) throws IOException {
-        log.info("通过统一文件服务删除附件，文件ID: {}", fileId);
+        log.debug("通过统一文件服务删除附件，文件ID: {}", fileId);
         attachmentService.deleteAttachment(fileId);
     }
     
     @Override
     public List<Attachment> getArticleAttachments(Long articleId) {
-        log.info("通过统一文件服务获取文章附件列表，文章ID: {}", articleId);
+        log.debug("通过统一文件服务获取文章附件列表，文章ID: {}", articleId);
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new ArticleNotFoundException("文章不存在，ID: " + articleId));
         List<Attachment> attachments = attachmentRepository.findByArticle(article);
-        log.info("找到 {} 个附件，文章ID: {}", attachments.size(), articleId);
+        log.debug("找到 {} 个附件，文章ID: {}", attachments.size(), articleId);
         return attachments;
     }
 }

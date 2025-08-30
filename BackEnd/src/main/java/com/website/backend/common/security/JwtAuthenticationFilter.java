@@ -47,27 +47,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         
         String requestURI = request.getRequestURI();
-        log.info("JWT过滤器处理请求: {} {}", request.getMethod(), requestURI);
+        log.debug("JWT过滤器处理请求: {} {}", request.getMethod(), requestURI);
         
         // 获取JWT令牌
         String token = getTokenFromRequest(request);
         
         if (token != null) {
-            log.info("找到JWT令牌，开始验证");
+            log.debug("找到JWT令牌，开始验证");
             try {
                 // 验证JWT令牌
                 String username = jwtTokenProvider.getUserNameFromJwtToken(token);
-                log.info("从JWT令牌中提取用户名: {}", username);
+                log.debug("从JWT令牌中提取用户名: {}", username);
                 
                 // 检查用户是否存在于数据库中
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 if (userDetails != null) {
-                    log.info("在数据库中找到用户: {}", username);
+                    log.debug("在数据库中找到用户: {}", username);
                     // 创建认证对象
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                    log.info("设置用户认证信息: {}", username);
+                    log.debug("设置用户认证信息: {}", username);
                 } else {
                     log.warn("在数据库中未找到用户: {}", username);
                 }
@@ -83,15 +83,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 log.error("处理JWT令牌时发生未知错误: {}", e.getMessage(), e);
             }
         } else {
-            log.info("未找到JWT令牌");
+            log.debug("未找到JWT令牌");
             
             // 对于公开路径，设置一个有效的认证以避免AuthorizationFilter拒绝访问
             if (isPublicPath(request)) {
-                log.info("为公开路径设置有效认证");
+                log.debug("为公开路径设置有效认证");
                 UsernamePasswordAuthenticationToken publicAuth = new UsernamePasswordAuthenticationToken(
                     "publicUser", null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
                 SecurityContextHolder.getContext().setAuthentication(publicAuth);
-                log.info("已为公开路径设置认证，继续执行过滤器链");
+                log.debug("已为公开路径设置认证，继续执行过滤器链");
             }
         }
         
