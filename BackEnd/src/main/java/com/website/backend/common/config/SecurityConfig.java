@@ -64,7 +64,8 @@ public class SecurityConfig {
 			"http://101.200.43.186:8083",
 			"http://localhost:8081",
 			"http://localhost:8082", 
-			"http://localhost:8083"));
+			"http://localhost:8083",
+			"http://localhost:5173"));
 		configuration.addAllowedMethod("*");
 		configuration.addAllowedHeader("*");
 		configuration.setAllowCredentials(true);
@@ -81,21 +82,25 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> {
+                log.info("配置安全路径...");
                 // 配置公开路径，允许所有HTTP方法访问
                 for (String publicPath : SecurityPathConfig.PUBLIC_PATHS) {
+                    log.info("允许公开路径: {}", publicPath);
                     auth.requestMatchers(publicPath).permitAll();
                 }
                 
-                // 配置需要管理员权限的路�?
+                // 配置需要管理员权限的路径
                 for (String adminPath : SecurityPathConfig.ADMIN_PATHS) {
+                    log.info("需要管理员权限的路径: {}", adminPath);
                     auth.requestMatchers(adminPath).hasRole("ADMIN");
                 }
                 
-                // 其他所有请求都需要认�?
+                // 其他所有请求都需要认证
                 auth.anyRequest().authenticated();
             })
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtExceptionHandlerFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class);
         
         return http.build();
     }

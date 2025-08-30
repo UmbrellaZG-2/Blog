@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/attachments")
+@RequestMapping("/attachments")
 public class AttachmentController {
 
 	private static final Logger logger = LoggerFactory.getLogger(AttachmentController.class);

@@ -190,7 +190,7 @@ const AdminArticles = () => {
                           {article.status}
                         </span>
                       </td>
-                      <td className="py-3 px-4">{new Date(article.createdAt).toLocaleDateString()}</td>
+                      <td className="py-3 px-4">{article.createTime ? new Date(article.createTime).toLocaleDateString() : '未知时间'}</td>
                       <td className="py-3 px-4">
                         <div className="flex gap-2">
                           <Button 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, Clock, Tag, Download, ArrowLeft, ThumbsUp, MessageCircle } from 'lucide-react';
+import { Calendar, Tag, Download, ArrowLeft, ThumbsUp, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { downloadAttachment, getComments, addComment, likeArticle, unlikeArticle, getArticleLikes, checkUserLikedArticle } from '@/services/api';
@@ -214,11 +214,7 @@ const ArticleDetail = ({ article }) => {
         <div className="flex flex-wrap items-center gap-4 mb-6 text-gray-600">
           <div className="flex items-center">
             <Calendar className="w-4 h-4 mr-1" />
-            {new Date(article.createdAt).toLocaleDateString()}
-          </div>
-          <div className="flex items-center">
-            <Clock className="w-4 h-4 mr-1" />
-            {article.readTime}分钟阅读
+            {article.createTime ? formatDate(article.createTime) : '未知时间'}
           </div>
           <div className="flex items-center">
             <span className="font-medium">{article.author}</span>

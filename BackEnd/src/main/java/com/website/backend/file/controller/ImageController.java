@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/images")
+@RequestMapping("/images")
 public class ImageController {
 
     private static final Logger logger = LoggerFactory.getLogger(ImageController.class);

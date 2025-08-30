@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/tags")
+@RequestMapping("/tags")
 public class TagController {
     
     private static final Logger log = LoggerFactory.getLogger(TagController.class);

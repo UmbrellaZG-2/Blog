@@ -10,7 +10,7 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/home")
+@RequestMapping("/home")
 public class HomeController {
     
     @GetMapping

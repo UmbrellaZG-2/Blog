@@ -29,7 +29,7 @@ public class JwtTokenProvider {
 	private int jwtExpirationMs;
 	
 	@Value("${app.jwtRefreshExpirationMs}")
-	private int jwtRefreshExpirationMs;
+	private long jwtRefreshExpirationMs;
 
 	public String generateToken(Authentication authentication) {
 		UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();

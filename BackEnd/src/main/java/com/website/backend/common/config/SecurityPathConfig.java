@@ -14,22 +14,24 @@ public class SecurityPathConfig {
     // 公开路径列表，无需认证即可访问
     public static final List<String> PUBLIC_PATHS = Arrays.asList(
             "/articles",
+            "/articles/",
             "/articles/**",
             "/auth/get",
             "/auth/login",
             "/auth/admin/login",
             "/auth/admin/register",
-            "/api/auth/guest/login",
-            "/api/auth/register/send-code",
-            "/api/auth/register/verify",
+            "/auth/guest/login",
+            "/auth/register/send-code",
+            "/auth/register/verify",
             "/attachments/**",
             "/images/**",
-            "/swagger-ui/**",
-            "/v3/api-docs/**",
             "/home",
             "/home/**",
-            "/api/home",
-            "/api/home/**"
+            "/tags",
+            "/tags/",
+            "/tags/**",
+            "/tags/get",
+            "/articles/categories/get"
     );
     
     // 需要管理员权限的路径
@@ -38,18 +40,20 @@ public class SecurityPathConfig {
             "/articles/update/**",
             "/articles/delete/**",
             "/articles/draft/**",
-            "/images/article/**/cover/update",
-            "/images/article/**/cover/delete",
+            "/images/article/*/cover/update",
+            "/images/article/*/cover/delete",
             "/attachments/upload",
             "/attachments/delete/**",
             "/comments/delete/**",
-            "/comments/edit/**"
+            "/comments/edit/**",
+            "/tags/create",
+            "/tags/delete/**"
     );
     
     // 敏感路径，需要特殊处理
     public static final List<String> SENSITIVE_PATHS = Arrays.asList(
             "/auth/login",
             "/auth/admin/login",
-            "/api/auth/register/verify"
+            "/auth/register/verify"
     );
 }
