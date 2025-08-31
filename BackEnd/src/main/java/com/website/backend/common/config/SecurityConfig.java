@@ -82,16 +82,16 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> {
-                log.info("配置安全路径...");
+                log.debug("配置安全路径...");
                 // 配置公开路径，允许所有HTTP方法访问
                 for (String publicPath : SecurityPathConfig.PUBLIC_PATHS) {
-                    log.info("允许公开路径: {}", publicPath);
+                    log.debug("允许公开路径: {}", publicPath);
                     auth.requestMatchers(publicPath).permitAll();
                 }
                 
                 // 配置需要管理员权限的路径
                 for (String adminPath : SecurityPathConfig.ADMIN_PATHS) {
-                    log.info("需要管理员权限的路径: {}", adminPath);
+                    log.debug("需要管理员权限的路径: {}", adminPath);
                     auth.requestMatchers(adminPath).hasRole("ADMIN");
                 }
                 

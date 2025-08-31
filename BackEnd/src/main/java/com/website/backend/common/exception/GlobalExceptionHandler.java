@@ -1,90 +1,98 @@
 package com.website.backend.common.exception;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
-import com.website.backend.article.exception.TagNotFoundException;
+import com.website.backend.article.exception.ArticleNotFoundException;
+import com.website.backend.article.exception.DraftNotFoundException;
 import com.website.backend.comment.exception.CommentNotFoundException;
+import com.website.backend.common.exception.custom.*;
+import com.website.backend.file.exception.FileUploadException;
 import com.website.backend.common.constant.HttpStatusConstants;
 import com.website.backend.common.model.ApiResponse;
-import com.website.backend.user.exception.UserNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
 	private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-	// 处理业务异常基类
-	@ExceptionHandler(BusinessException.class)
-	public ApiResponse<?> handleBusinessException(BusinessException e) {
-		logger.error("业务异常: {}, 错误代码: {}", e.getMessage(), e.getErrorCode());
-		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", e.getErrorCode());
-		errorInfo.put("statusCode", e.getStatusCode());
-		return ApiResponse.fail(e.getStatusCode(), e.getMessage(), errorInfo);
+	@ExceptionHandler(Exception.class)
+	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+	public ApiResponse<?> handleException(Exception e) {
+		logger.error("发生未预期的异常: {}", e.getMessage(), e);
+		return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "服务器内部错误: " + e.getMessage());
 	}
 
-	// 处理文章不存在异常
+	// 处理资源未找到异常
+	@ExceptionHandler(ResourceNotFoundException.class)
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	public ApiResponse<?> handleResourceNotFound(ResourceNotFoundException e) {
+		logger.error("资源不存在: {}", e.getMessage());
+		Map<String, Object> errorInfo = new HashMap<>();
+		errorInfo.put("errorCode", "RESOURCE_NOT_FOUND");
+		return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage(), errorInfo);
+	}
+
+	// 处理文章未找到异常
 	@ExceptionHandler(ArticleNotFoundException.class)
 	@ResponseStatus(HttpStatus.NOT_FOUND)
-	public ApiResponse<?> handleArticleNotFoundException(ArticleNotFoundException e) {
-		logger.error("文章不存在异常: {}", e.getMessage());
+	public ApiResponse<?> handleArticleNotFound(ArticleNotFoundException e) {
+		logger.error("文章不存在: {}", e.getMessage());
 		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", e.getErrorCode());
+		errorInfo.put("errorCode", "ARTICLE_NOT_FOUND");
 		return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage(), errorInfo);
 	}
 
-	// 处理草稿不存在异常
+	// 处理草稿未找到异常
 	@ExceptionHandler(DraftNotFoundException.class)
 	@ResponseStatus(HttpStatus.NOT_FOUND)
-	public ApiResponse<?> handleDraftNotFoundException(DraftNotFoundException e) {
-		logger.error("草稿不存在异常: {}", e.getMessage());
+	public ApiResponse<?> handleDraftNotFound(DraftNotFoundException e) {
+		logger.error("草稿不存在: {}", e.getMessage());
 		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", e.getErrorCode());
+		errorInfo.put("errorCode", "DRAFT_NOT_FOUND");
 		return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage(), errorInfo);
 	}
 
-	// 处理标签不存在异常
-	@ExceptionHandler(TagNotFoundException.class)
-	@ResponseStatus(HttpStatus.NOT_FOUND)
-	public ApiResponse<?> handleTagNotFoundException(TagNotFoundException e) {
-		logger.error("标签不存在异常: {}", e.getMessage());
-		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", e.getErrorCode());
-		return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage(), errorInfo);
-	}
-
-	// 处理评论不存在异常
+	// 处理评论未找到异常
 	@ExceptionHandler(CommentNotFoundException.class)
 	@ResponseStatus(HttpStatus.NOT_FOUND)
-	public ApiResponse<?> handleCommentNotFoundException(CommentNotFoundException e) {
-		logger.error("评论不存在异常: {}", e.getMessage());
+	public ApiResponse<?> handleCommentNotFound(CommentNotFoundException e) {
+		logger.error("评论不存在: {}", e.getMessage());
 		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", e.getErrorCode());
+		errorInfo.put("errorCode", "COMMENT_NOT_FOUND");
 		return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage(), errorInfo);
 	}
 
-	// 处理用户不存在异常
-	@ExceptionHandler(UserNotFoundException.class)
+	// 处理标签未找到异常
+	@ExceptionHandler(TagNotFoundException.class)
 	@ResponseStatus(HttpStatus.NOT_FOUND)
-	public ApiResponse<?> handleUserNotFoundException(UserNotFoundException e) {
-		logger.error("用户不存在异常: {}", e.getMessage());
+	public ApiResponse<?> handleTagNotFound(TagNotFoundException e) {
+		logger.error("标签不存在: {}", e.getMessage());
 		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", e.getErrorCode());
+		errorInfo.put("errorCode", "TAG_NOT_FOUND");
 		return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage(), errorInfo);
 	}
 
-	// 处理静态资源未找到异常（针对路径配置错误）
+	// 处理文章权限不足异常
+	@ExceptionHandler(com.website.backend.common.exception.custom.ArticlePermissionDeniedException.class)
+	@ResponseStatus(HttpStatus.FORBIDDEN)
+	public ApiResponse<?> handleArticlePermissionDenied(com.website.backend.common.exception.custom.ArticlePermissionDeniedException e) {
+		logger.error("文章权限不足: {}", e.getMessage());
+		Map<String, Object> errorInfo = new HashMap<>();
+		errorInfo.put("errorCode", "ARTICLE_PERMISSION_DENIED");
+		return ApiResponse.fail(HttpStatusConstants.FORBIDDEN, e.getMessage(), errorInfo);
+	}
+
+	// 处理请求的资源未找到异常(Spring Boot 3.x)
 	@ExceptionHandler(NoResourceFoundException.class)
 	@ResponseStatus(HttpStatus.NOT_FOUND)
 	public ApiResponse<?> handleNoResourceFoundException(NoResourceFoundException e) {
@@ -106,9 +114,9 @@ public class GlobalExceptionHandler {
 	}
 
 	// 处理认证异常
-	@ExceptionHandler(AuthenticationException.class)
+	@ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
 	@ResponseStatus(HttpStatus.UNAUTHORIZED)
-	public ApiResponse<?> handleAuthenticationException(AuthenticationException e) {
+	public ApiResponse<?> handleAuthenticationException(org.springframework.security.core.AuthenticationException e) {
 		logger.error("认证失败: {}", e.getMessage());
 		Map<String, Object> errorInfo = new HashMap<>();
 		errorInfo.put("errorCode", "AUTHENTICATION_FAILED");
@@ -155,24 +163,23 @@ public class GlobalExceptionHandler {
 		return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "文件操作失败: " + e.getMessage(), errorInfo);
 	}
 
-	// 处理非法参数异常
-	@ExceptionHandler(IllegalArgumentException.class)
+	// 处理数据验证异常
+	@ExceptionHandler(DataValidationException.class)
 	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	public ApiResponse<?> handleIllegalArgumentException(IllegalArgumentException e) {
-		logger.error("非法参数异常: {}", e.getMessage());
+	public ApiResponse<?> handleDataValidation(DataValidationException e) {
+		logger.error("数据验证失败: {}", e.getMessage());
 		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", "ILLEGAL_ARGUMENT");
-		return ApiResponse.fail(HttpStatusConstants.BAD_REQUEST, "请求参数错误: " + e.getMessage(), errorInfo);
+		errorInfo.put("errorCode", "DATA_VALIDATION_FAILED");
+		return ApiResponse.fail(HttpStatusConstants.BAD_REQUEST, e.getMessage(), errorInfo);
 	}
 
-	// 处理通用异常
-	@ExceptionHandler(Exception.class)
-	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-	public ApiResponse<?> handleException(Exception e) {
-		logger.error("发生未预期的异常: {}", e.getMessage(), e);
+	// 处理业务异常
+	@ExceptionHandler(BusinessException.class)
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	public ApiResponse<?> handleBusinessException(BusinessException e) {
+		logger.error("业务异常: {}", e.getMessage());
 		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", "SERVER_ERROR");
-		errorInfo.put("exceptionType", e.getClass().getSimpleName());
-		return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "服务器内部错误: " + e.getMessage(), errorInfo);
+		errorInfo.put("errorCode", e.getErrorCode());
+		return ApiResponse.fail(e.getHttpStatus().value(), e.getMessage(), errorInfo);
 	}
 }

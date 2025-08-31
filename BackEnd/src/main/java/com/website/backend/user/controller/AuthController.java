@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.website.backend.user.entity.User;
 
-import com.website.backend.user.exception.UserNotFoundException;
+import com.website.backend.common.exception.custom.NotAdminException;
 import com.website.backend.common.security.JwtTokenProvider;
 import com.website.backend.system.service.GuestService;
 import com.website.backend.user.service.UserService;
@@ -107,18 +107,18 @@ public class AuthController {
 		}
 
 		try {
-			// 验证管理员凭�?
+			// 验证管理员凭?
 			Authentication authentication = authenticationManager.authenticate(
 					new UsernamePasswordAuthenticationToken(username, password));
 			SecurityContextHolder.getContext().setAuthentication(authentication);
 
-			// 检查是否为管理员角�?
+			// 检查是否为管理员角?
 			boolean isAdmin = authentication.getAuthorities().stream()
 					.anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
 
 			if (!isAdmin) {
 				log.warn("用户 {} 不是管理员", username);
-			throw new UserNotFoundException(username);
+				throw new NotAdminException("用户没有管理员权限");
 			}
 
 			String jwt = jwtTokenProvider.generateToken(authentication);
@@ -129,6 +129,8 @@ public class AuthController {
 			response.put("message", "管理员登录成功");
 
 			return ResponseEntity.ok(response);
+		} catch (NotAdminException e) {
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
 		} catch (UsernameNotFoundException e) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("用户不存在");
 		} catch (Exception e) {
@@ -142,12 +144,21 @@ public class AuthController {
 		String username = request.get("username");
 		String password = request.get("password");
 		String email = request.get("email");
+		String verificationCode = request.get("verificationCode");
 
 		log.info("开始处理管理员注册请求，用户名: {}", username);
 
-		if (username == null || username.isEmpty() || password == null || password.isEmpty()) {
-			log.warn("用户名或密码为空");
-			return ResponseEntity.badRequest().body("用户名和密码不能为空");
+		if (username == null || username.isEmpty() || password == null || password.isEmpty()
+				|| verificationCode == null || verificationCode.isEmpty()) {
+			log.warn("用户名、密码或验证码为空");
+			return ResponseEntity.badRequest().body("用户名、密码和验证码不能为空");
+		}
+
+		// 检查验证码是否有效
+		boolean isValid = verificationCodeService.validateCode(email, verificationCode);
+
+		if (!isValid) {
+			return ResponseEntity.badRequest().body("验证码无效或已过期");
 		}
 
 		// 检查用户名是否已存在
@@ -165,6 +176,37 @@ public class AuthController {
 			return ResponseEntity.ok("管理员注册成功");
 		} catch (Exception e) {
 			log.error("管理员注册失败: {}", e.getMessage(), e);
+			return ResponseEntity.badRequest().body("注册失败: " + e.getMessage());
+		}
+	}
+
+	@PostMapping("/register")
+	public ResponseEntity<?> userRegister(@RequestBody Map<String, String> request) {
+		String username = request.get("username");
+		String password = request.get("password");
+
+		log.info("开始处理用户注册请求，用户名: {}", username);
+
+		if (username == null || username.isEmpty() || password == null || password.isEmpty()) {
+			log.warn("用户名或密码为空");
+			return ResponseEntity.badRequest().body("用户名和密码不能为空");
+		}
+
+		// 检查用户名是否已存在
+		log.debug("检查用户名是否已存在");
+		if (userService.existsByUsername(username)) {
+			log.warn("用户名已存在: {}", username);
+			return ResponseEntity.badRequest().body("用户名已存在");
+		}
+
+		// 注册普通用户
+		try {
+			log.debug("开始注册普通用户");
+			User user = userService.registerUser(username, password, false);
+			log.info("用户注册成功，用户名: {}", username);
+			return ResponseEntity.ok("用户注册成功");
+		} catch (Exception e) {
+			log.error("用户注册失败: {}", e.getMessage(), e);
 			return ResponseEntity.badRequest().body("注册失败: " + e.getMessage());
 		}
 	}
@@ -244,6 +286,4 @@ public class AuthController {
 		}
 		return ResponseEntity.ok("注册成功");
 	}
-
-
 }

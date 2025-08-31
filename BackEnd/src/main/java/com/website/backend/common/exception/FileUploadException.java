@@ -1,9 +1,2 @@
-package com.website.backend.common.exception;
-
-public class FileUploadException extends RuntimeException {
-
-	public FileUploadException(String message) {
-		super(message);
-	}
-
-}
+// 已移动到 com.website.backend.common.exception.custom.FileUploadException
+// 请使用新的异常类位置

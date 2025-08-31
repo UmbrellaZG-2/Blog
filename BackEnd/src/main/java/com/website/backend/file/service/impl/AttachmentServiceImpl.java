@@ -2,9 +2,8 @@ package com.website.backend.file.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import com.website.backend.common.config.FileStorageConfig;
+import com.website.backend.file.service.FileOperationHelper;
 import org.springframework.util.StringUtils;
-import java.io.File;
-import java.nio.file.Files;
 import com.website.backend.article.entity.Article;
 import com.website.backend.file.entity.Attachment;
 import com.website.backend.system.entity.SystemConfig;
@@ -13,6 +12,7 @@ import com.website.backend.system.repository.SystemConfigRepository;
 import com.website.backend.file.service.AttachmentService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -27,12 +27,15 @@ public class AttachmentServiceImpl implements AttachmentService {
 	private final FileStorageConfig fileStorageConfig;
 
 	private final SystemConfigRepository systemConfigRepository;
+	
+	private final FileOperationHelper fileOperationHelper;
 
 	public AttachmentServiceImpl(AttachmentRepository attachmentRepository, FileStorageConfig fileStorageConfig,
-			SystemConfigRepository systemConfigRepository) {
+			SystemConfigRepository systemConfigRepository, FileOperationHelper fileOperationHelper) {
 		this.attachmentRepository = attachmentRepository;
 		this.fileStorageConfig = fileStorageConfig;
 		this.systemConfigRepository = systemConfigRepository;
+		this.fileOperationHelper = fileOperationHelper;
 	}
 
 	@Override
@@ -93,20 +96,11 @@ public class AttachmentServiceImpl implements AttachmentService {
 		log.debug("开始下载附件，附件ID: {}", attachmentId);
 		Attachment attachment = attachmentRepository.findById(attachmentId).orElseThrow(() -> {
 			log.error("附件不存在，附件ID: {}", attachmentId);
-			return new IOException("Attachment not found");
+			return new RuntimeException("Attachment not found");
 		});
 
 		String filePath = attachment.getFilePath();
-		if (filePath == null || filePath.isEmpty()) {
-			throw new IOException("Attachment file path not found for id: " + attachmentId);
-		}
-
-		File file = new File(filePath);
-		if (!file.exists()) {
-			throw new IOException("Attachment file not found: " + filePath);
-		}
-
-		return Files.readAllBytes(file.toPath());
+		return fileOperationHelper.readFileContent(filePath);
 	}
 
 	@Override
@@ -118,19 +112,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 		});
 
 		String filePath = attachment.getFilePath();
-
-		if (filePath != null && !filePath.isEmpty()) {
-			File file = new File(filePath);
-			if (file.exists()) {
-				boolean deleted = file.delete();
-				if (deleted) {
-					log.debug("从文件系统删除附件成功: {}", filePath);
-				}
-				else {
-					log.warn("从文件系统删除附件失败: {}", filePath);
-				}
-			}
-		}
+		fileOperationHelper.deleteFile(filePath);
 
 		attachmentRepository.delete(attachment);
 		log.debug("从数据库删除附件记录成功,附件ID: {}", attachmentId);
@@ -164,19 +146,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 
 		for (Attachment attachment : attachments) {
 			String filePath = attachment.getFilePath();
-
-			if (filePath != null && !filePath.isEmpty()) {
-				File file = new File(filePath);
-				if (file.exists()) {
-					boolean deleted = file.delete();
-					if (deleted) {
-						log.info("从文件系统删除附件成功: {}", filePath);
-					}
-					else {
-						log.warn("从文件系统删除附件失败: {}", filePath);
-					}
-				}
-			}
+			fileOperationHelper.deleteFile(filePath);
 
 			attachmentRepository.delete(attachment);
 			log.info("从数据库删除附件记录成功,附件ID: {}", attachment.getAttachmentId());
