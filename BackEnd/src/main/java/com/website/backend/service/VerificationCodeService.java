@@ -25,4 +25,19 @@ public interface VerificationCodeService {
      * 删除过期的验证码
      */
     void deleteExpiredCodes();
+    
+    /**
+     * 生成验证码
+     * @param email 邮箱
+     * @return 生成的验证码
+     */
+    String generateCode(String email);
+    
+    /**
+     * 验证验证码
+     * @param email 邮箱
+     * @param code 验证码
+     * @return 验证结果
+     */
+    boolean validateCode(String email, String code);
 }

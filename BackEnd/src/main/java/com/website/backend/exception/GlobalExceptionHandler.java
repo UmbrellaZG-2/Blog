@@ -1,5 +1,6 @@
 package com.website.backend.exception;
 
+import com.website.backend.common.exception.custom.*;
 import com.website.backend.constant.HttpStatusConstants;
 import com.website.backend.model.ApiResponse;
 import org.slf4j.Logger;
@@ -58,4 +59,68 @@ public class GlobalExceptionHandler {
 		return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "文件操作失败: " + e.getMessage());
 	}
 
+	// 新增自定义异常处理
+	
+	@ExceptionHandler(PasswordErrorException.class)
+	@ResponseStatus(HttpStatus.UNAUTHORIZED)
+	public ApiResponse<?> handlePasswordError(PasswordErrorException e) {
+		logger.error("密码错误: {}", e.getMessage());
+		return ApiResponse.fail(HttpStatusConstants.UNAUTHORIZED, e.getMessage());
+	}
+
+	@ExceptionHandler(AccountNotFoundException.class)
+	@ResponseStatus(HttpStatus.UNAUTHORIZED)
+	public ApiResponse<?> handleAccountNotFound(AccountNotFoundException e) {
+		logger.error("账号不存在: {}", e.getMessage());
+		return ApiResponse.fail(HttpStatusConstants.UNAUTHORIZED, e.getMessage());
+	}
+
+	@ExceptionHandler(NotAdminException.class)
+	@ResponseStatus(HttpStatus.FORBIDDEN)
+	public ApiResponse<?> handleNotAdmin(NotAdminException e) {
+		logger.error("用户不是管理员: {}", e.getMessage());
+		return ApiResponse.fail(HttpStatusConstants.FORBIDDEN, e.getMessage());
+	}
+
+	@ExceptionHandler(com.website.backend.common.exception.custom.ArticleNotFoundException.class)
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	public ApiResponse<?> handleArticleNotFound(com.website.backend.common.exception.custom.ArticleNotFoundException e) {
+		logger.error("文章不存在: {}", e.getMessage());
+		return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage());
+	}
+
+	@ExceptionHandler(ArticlePermissionDeniedException.class)
+	@ResponseStatus(HttpStatus.FORBIDDEN)
+	public ApiResponse<?> handleArticlePermissionDenied(ArticlePermissionDeniedException e) {
+		logger.error("文章权限不足: {}", e.getMessage());
+		return ApiResponse.fail(HttpStatusConstants.FORBIDDEN, e.getMessage());
+	}
+
+	@ExceptionHandler(DataValidationException.class)
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	public ApiResponse<?> handleDataValidation(DataValidationException e) {
+		logger.error("数据验证失败: {}", e.getMessage());
+		return ApiResponse.fail(HttpStatusConstants.BAD_REQUEST, e.getMessage());
+	}
+
+	@ExceptionHandler(FileOperationException.class)
+	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+	public ApiResponse<?> handleFileOperation(FileOperationException e) {
+		logger.error("文件操作失败: {}", e.getMessage());
+		return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, e.getMessage());
+	}
+
+	@ExceptionHandler(CommentNotFoundException.class)
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	public ApiResponse<?> handleCommentNotFound(CommentNotFoundException e) {
+		logger.error("评论不存在: {}", e.getMessage());
+		return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage());
+	}
+
+	@ExceptionHandler(TagNotFoundException.class)
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	public ApiResponse<?> handleTagNotFound(TagNotFoundException e) {
+		logger.error("标签不存在: {}", e.getMessage());
+		return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, e.getMessage());
+	}
 }
