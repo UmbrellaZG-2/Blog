@@ -22,9 +22,15 @@ const ArticleList = ({ articles = [] }) => {
           className="hover:shadow-lg transition-shadow cursor-pointer"
           onClick={() => handleArticleClick(article.id)}
         >
-          {article.coverImage && (
+          {(article.coverImage && article.coverImage !== 'false') ? (
             <img 
               src={article.coverImage} 
+              alt={article.title} 
+              className="w-full h-48 object-cover rounded-t-lg"
+            />
+          ) : (
+            <img 
+              src="/resource/pic/cover.png" 
               alt={article.title} 
               className="w-full h-48 object-cover rounded-t-lg"
             />

@@ -129,12 +129,10 @@ public class AuthController {
 			response.put("message", "管理员登录成功");
 
 			return ResponseEntity.ok(response);
-		} catch (UserNotFoundException e) {
-			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
 		} catch (UsernameNotFoundException e) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("用户不存在");
 		} catch (Exception e) {
-			log.error("管理员登录失败: {}", e.getMessage());
+			log.error("管理员登录失败: {}", e.getMessage(), e);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("登录失败");
 		}
 	}
