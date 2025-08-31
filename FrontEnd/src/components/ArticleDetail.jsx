@@ -232,9 +232,15 @@ const ArticleDetail = ({ article }) => {
           </div>
         </div>
         
-        {article.coverImage && (
+        {(article.coverImage && article.coverImage !== 'false') ? (
           <img 
             src={article.coverImage} 
+            alt={article.title} 
+            className="w-full h-96 object-cover rounded-lg mb-8"
+          />
+        ) : (
+          <img 
+            src="/resource/pic/cover.png" 
             alt={article.title} 
             className="w-full h-96 object-cover rounded-lg mb-8"
           />
