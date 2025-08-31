@@ -2,10 +2,10 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.website.backend.mapper.GuestUserMapper">
+<mapper namespace="com.website.backend.common.mapper.GuestUserMapper">
 
     <!-- 保留resultMap供注解方式的SQL使用 -->
-    <resultMap id="BaseResultMap" type="com.website.backend.entity.GuestUser">
+    <resultMap id="BaseResultMap" type="com.website.backend.system.entity.GuestUser">
         <id column="id" property="id"/>
         <result column="username" property="username"/>
         <result column="password" property="password"/>

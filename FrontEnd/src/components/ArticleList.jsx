@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Tag } from 'lucide-react';
+import { Calendar, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const ArticleList = ({ articles = [] }) => {
@@ -22,9 +22,15 @@ const ArticleList = ({ articles = [] }) => {
           className="hover:shadow-lg transition-shadow cursor-pointer"
           onClick={() => handleArticleClick(article.id)}
         >
-          {article.coverImage && (
+          {(article.coverImage && article.coverImage !== 'false') ? (
             <img 
               src={article.coverImage} 
+              alt={article.title} 
+              className="w-full h-48 object-cover rounded-t-lg"
+            />
+          ) : (
+            <img 
+              src="/resource/pic/cover.png" 
               alt={article.title} 
               className="w-full h-48 object-cover rounded-t-lg"
             />
@@ -45,11 +51,7 @@ const ArticleList = ({ articles = [] }) => {
             <div className="flex justify-between text-sm text-gray-500">
               <div className="flex items-center">
                 <Calendar className="w-4 h-4 mr-1" />
-                {new Date(article.createdAt).toLocaleDateString()}
-              </div>
-              <div className="flex items-center">
-                <Clock className="w-4 h-4 mr-1" />
-                {article.readTime}分钟阅读
+                {article.createTime ? new Date(article.createTime).toLocaleDateString() : '未知时间'}
               </div>
             </div>
           </CardContent>

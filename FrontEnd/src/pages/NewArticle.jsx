@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { createArticle, uploadAttachment, uploadCoverImage } from '@/services/api';
+import { createArticle, uploadAttachment, uploadCoverImage, saveDraft } from '@/services/api';
 
 const NewArticle = () => {
   const navigate = useNavigate();
@@ -98,8 +98,13 @@ const NewArticle = () => {
         status: formData.status
       };
 
-      // 创建文章
-      const response = await createArticle(articleData);
+      // 根据状态选择创建文章或保存草稿
+      let response;
+      if (formData.status === 'published') {
+        response = await createArticle(articleData);
+      } else {
+        response = await saveDraft(articleData);
+      }
       
       if (response.success) {
         const articleId = response.data.id;

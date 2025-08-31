@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, Clock, Tag, Download, ArrowLeft, ThumbsUp, MessageCircle } from 'lucide-react';
+import { Calendar, Tag, Download, ArrowLeft, ThumbsUp, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { downloadAttachment, getComments, addComment } from '@/services/api';
+import { downloadAttachment, getComments, addComment, likeArticle, unlikeArticle, getArticleLikes, checkUserLikedArticle } from '@/services/api';
 
 const ArticleDetail = ({ article }) => {
   const navigate = useNavigate();
@@ -18,6 +18,7 @@ const ArticleDetail = ({ article }) => {
   useEffect(() => {
     if (article && article.id) {
       loadComments();
+      loadLikes();
     }
   }, [article]);
 
@@ -30,13 +31,35 @@ const ArticleDetail = ({ article }) => {
   // 确保attachments是数组类型
   const safeAttachments = Array.isArray(article.attachments) ? article.attachments : [];
 
-  const handleLike = () => {
-    if (isLiked) {
-      setLikes(likes - 1);
-    } else {
-      setLikes(likes + 1);
+  const handleLike = async () => {
+    try {
+      if (isLiked) {
+        await unlikeArticle(article.id);
+        setLikes(likes - 1);
+      } else {
+        await likeArticle(article.id);
+        setLikes(likes + 1);
+      }
+      setIsLiked(!isLiked);
+    } catch (error) {
+      toast.error(`点赞操作失败: ${error.message}`);
     }
-    setIsLiked(!isLiked);
+  };
+
+  const loadLikes = async () => {
+    try {
+      const likesResponse = await getArticleLikes(article.id);
+      if (likesResponse.success) {
+        setLikes(likesResponse.data);
+      }
+      
+      const likedResponse = await checkUserLikedArticle(article.id);
+      if (likedResponse.success) {
+        setIsLiked(likedResponse.data);
+      }
+    } catch (error) {
+      console.error('加载点赞信息失败:', error);
+    }
   };
 
   const handleDownload = async (attachment) => {
@@ -191,11 +214,7 @@ const ArticleDetail = ({ article }) => {
         <div className="flex flex-wrap items-center gap-4 mb-6 text-gray-600">
           <div className="flex items-center">
             <Calendar className="w-4 h-4 mr-1" />
-            {new Date(article.createdAt).toLocaleDateString()}
-          </div>
-          <div className="flex items-center">
-            <Clock className="w-4 h-4 mr-1" />
-            {article.readTime}分钟阅读
+            {article.createTime ? formatDate(article.createTime) : '未知时间'}
           </div>
           <div className="flex items-center">
             <span className="font-medium">{article.author}</span>
@@ -213,9 +232,15 @@ const ArticleDetail = ({ article }) => {
           </div>
         </div>
         
-        {article.coverImage && (
+        {(article.coverImage && article.coverImage !== 'false') ? (
           <img 
             src={article.coverImage} 
+            alt={article.title} 
+            className="w-full h-96 object-cover rounded-lg mb-8"
+          />
+        ) : (
+          <img 
+            src="/resource/pic/cover.png" 
             alt={article.title} 
             className="w-full h-96 object-cover rounded-lg mb-8"
           />
