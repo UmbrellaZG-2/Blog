@@ -12,7 +12,10 @@ import com.website.backend.article.dto.DeleteArticleResponseDTO;
 import com.website.backend.article.dto.CommentDTO;
 import com.website.backend.article.entity.Article;
 import com.website.backend.comment.entity.Comment;
-import com.website.backend.article.exception.ArticleNotFoundException;
+import com.website.backend.article.service.ArticleService;
+import com.website.backend.article.service.ArticleServiceHelper;
+import com.website.backend.common.exception.custom.ArticleNotFoundException;
+import com.website.backend.common.exception.custom.CommentNotFoundException;
 import com.website.backend.common.model.ApiResponse;
 import com.website.backend.article.repository.ArticleRepository;
 import com.website.backend.comment.repository.CommentRepository;
@@ -39,16 +42,21 @@ public class ArticleController {
 	private final ArticleTagRepository articleTagRepository;
 	private final DTOConverter dtoConverter;
 	private final SensitiveWordFilterService sensitiveWordFilterService;
+	private final ArticleServiceHelper articleServiceHelper;
+	private final ArticleService articleService;
 
 	public ArticleController(ArticleRepository articleRepo, CommentRepository commentRepository,
 			TagRepository tagRepository, ArticleTagRepository articleTagRepository, DTOConverter dtoConverter,
-			SensitiveWordFilterService sensitiveWordFilterService) {
+			SensitiveWordFilterService sensitiveWordFilterService, ArticleServiceHelper articleServiceHelper,
+			ArticleService articleService) {
 		this.articleRepo = articleRepo;
 		this.commentRepository = commentRepository;
 		this.tagRepository = tagRepository;
 		this.articleTagRepository = articleTagRepository;
 		this.dtoConverter = dtoConverter;
 		this.sensitiveWordFilterService = sensitiveWordFilterService;
+		this.articleServiceHelper = articleServiceHelper;
+		this.articleService = articleService;
 	}
 
 	@GetMapping
@@ -95,8 +103,7 @@ public class ArticleController {
 	@GetMapping("/get/{id}")
 	public ApiResponse<ArticleDTO> articleDetails(@PathVariable Long id) {
 
-		Article article = articleRepo.findById(id)
-				.orElseThrow(() -> new ArticleNotFoundException(id.toString()));
+		Article article = articleServiceHelper.getArticleByIdOrThrow(id);
 		ArticleDTO dto = dtoConverter.convertToDTO(article);
 		return ApiResponse.success(dto);
 	}
@@ -115,8 +122,7 @@ public class ArticleController {
 	public ApiResponse<Comment> addComment(@PathVariable Long articleId, @RequestParam String content,
 			@RequestParam(required = false) Long parentId) {
 
-		Article article = articleRepo.findById(articleId)
-				.orElseThrow(() -> new ArticleNotFoundException(articleId.toString()));
+		Article article = articleServiceHelper.getArticleByIdOrThrow(articleId);
 
 		// 过滤敏感词
 		String filteredContent = sensitiveWordFilterService.filter(content);
@@ -140,7 +146,7 @@ public class ArticleController {
 	@PreAuthorize("hasRole('ADMIN')")
 	public ApiResponse<CommentDTO> updateComment(@PathVariable Long commentId, @RequestParam String content) {
 		Comment comment = commentRepository.findById(commentId)
-				.orElseThrow(() -> new ArticleNotFoundException("评论不存在，ID: " + commentId));
+				.orElseThrow(() -> new CommentNotFoundException(commentId.toString()));
 
 		// 过滤敏感词
 		String filteredContent = sensitiveWordFilterService.filter(content);
@@ -158,9 +164,9 @@ public class ArticleController {
 	@PreAuthorize("hasRole('ADMIN')")
 	public ApiResponse<String> deleteComment(@PathVariable Long commentId) {
 		Comment comment = commentRepository.findById(commentId)
-				.orElseThrow(() -> new ArticleNotFoundException("评论不存在，ID: " + commentId));
+				.orElseThrow(() -> new CommentNotFoundException(commentId.toString()));
 
-		// 如果是父评论，需要先删除所有回�?
+		// 如果是父评论，需要先删除所有回复
 		if (comment.getParentId() == null) {
 			List<Comment> replies = commentRepository.findByParentId(commentId);
 			commentRepository.deleteAll(replies);
@@ -173,18 +179,17 @@ public class ArticleController {
 	@GetMapping("/{articleId}/comments/get")
 	public ApiResponse<List<CommentDTO>> getArticleComments(@PathVariable Long articleId) {
 
-		Article article = articleRepo.findById(articleId)
-				.orElseThrow(() -> new ArticleNotFoundException(articleId.toString()));
+		Article article = articleServiceHelper.getArticleByIdOrThrow(articleId);
 
 		// 获取顶级评论
 		List<Comment> topLevelComments = commentRepository.findByArticleIdAndParentIdIsNull(articleId);
 		
-		// 构建评论�?
+		// 构建评论树
 		List<CommentDTO> commentDTOs = new ArrayList<>();
 		for (Comment comment : topLevelComments) {
 			CommentDTO commentDTO = convertToCommentDTO(comment);
 			
-			// 获取该评论的所有回复并按时间排�?
+			// 获取该评论的所有回复并按时间排序
 			List<Comment> replies = commentRepository.findByParentIdOrderByCreateTimeAsc(comment.getId());
 			List<CommentDTO> replyDTOs = replies.stream()
 					.map(this::convertToCommentDTO)
@@ -220,8 +225,7 @@ public class ArticleController {
 	@PreAuthorize("hasRole('ADMIN')")
 	public ApiResponse<List<String>> addArticleTags(@PathVariable Long articleId, @RequestBody List<String> tagNames) {
 
-		Article article = articleRepo.findById(articleId)
-				.orElseThrow(() -> new ArticleNotFoundException(articleId.toString()));
+		Article article = articleServiceHelper.getArticleByIdOrThrow(articleId);
 
 		for (String tagName : tagNames) {
 			tagRepository.findByName(tagName).orElseGet(() -> {
@@ -242,8 +246,7 @@ public class ArticleController {
 	@PreAuthorize("hasRole('ADMIN')")
 	public ApiResponse<List<String>> removeArticleTag(@PathVariable Long articleId, @PathVariable String tagName) {
 
-		Article article = articleRepo.findById(articleId)
-				.orElseThrow(() -> new ArticleNotFoundException(articleId.toString()));
+		Article article = articleServiceHelper.getArticleByIdOrThrow(articleId);
 
 		tagRepository.findByName(tagName).ifPresent(tag -> {
 			articleTagRepository.deleteByArticleIdAndTagId(articleId, tag.getId());
@@ -261,15 +264,8 @@ public class ArticleController {
 			@RequestParam String content, @RequestParam(required = false) MultipartFile attachment,
 			@RequestParam(required = false) MultipartFile picture) {
 
-		Article article = new Article();
-		article.setTitle(title);
-		article.setCategory(category);
-		article.setContent(content);
-		article.setCreateTime(LocalDateTime.now());
-
-		Article savedArticle = articleRepo.save(article);
-
-		ArticleDTO dto = dtoConverter.convertToDTO(savedArticle);
+		Article article = articleService.createArticle(title, category, content, attachment, picture);
+		ArticleDTO dto = dtoConverter.convertToDTO(article);
 		return ApiResponse.success(dto);
 	}
 
@@ -282,8 +278,7 @@ public class ArticleController {
 			@RequestParam(required = false) MultipartFile attachment,
 			@RequestParam(required = false) MultipartFile picture) {
 
-		Article article = articleRepo.findById(id)
-				.orElseThrow(() -> new ArticleNotFoundException(id.toString()));
+		Article article = articleServiceHelper.getArticleByIdOrThrow(id);
 
 		article.setTitle(title);
 		article.setCategory(category);
@@ -300,8 +295,7 @@ public class ArticleController {
 	@PreAuthorize("hasRole('ADMIN')")
 	public ApiResponse<DeleteArticleResponseDTO> deleteArticle(@PathVariable Long id) {
 
-		Article article = articleRepo.findById(id)
-				.orElseThrow(() -> new ArticleNotFoundException(id.toString()));
+		Article article = articleServiceHelper.getArticleByIdOrThrow(id);
 
 		articleRepo.deleteById(id);
 

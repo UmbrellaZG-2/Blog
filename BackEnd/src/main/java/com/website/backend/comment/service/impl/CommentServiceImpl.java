@@ -8,6 +8,7 @@ import com.website.backend.article.dto.CommentDTO;
 import com.website.backend.comment.entity.Comment;
 import com.website.backend.comment.repository.CommentRepository;
 import com.website.backend.comment.service.CommentService;
+import com.website.backend.comment.service.CommentServiceHelper;
 
 import com.website.backend.comment.exception.CommentNotFoundException;
 import org.springframework.stereotype.Service;
@@ -16,9 +17,11 @@ import org.springframework.stereotype.Service;
 public class CommentServiceImpl implements CommentService {
 
     private final CommentRepository commentRepository;
+    private final CommentServiceHelper commentServiceHelper;
 
-    public CommentServiceImpl(CommentRepository commentRepository) {
+    public CommentServiceImpl(CommentRepository commentRepository, CommentServiceHelper commentServiceHelper) {
         this.commentRepository = commentRepository;
+        this.commentServiceHelper = commentServiceHelper;
     }
 
     @Override
@@ -40,8 +43,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentDTO updateComment(Long id, CommentDTO commentDTO) {
-        Comment existingComment = commentRepository.findById(id)
-                .orElseThrow(() -> new CommentNotFoundException(id.toString()));
+        Comment existingComment = commentServiceHelper.getCommentByIdOrThrow(id);
         
         existingComment.setContent(commentDTO.getContent());
         existingComment.setNickname(commentDTO.getAuthor());
@@ -53,7 +55,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public void deleteComment(Long id) {
-        if (!commentRepository.existsById(id)) {
+        if (!commentServiceHelper.existsById(id)) {
             throw new CommentNotFoundException(id.toString());
         }
         commentRepository.deleteById(id);
@@ -61,8 +63,7 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public CommentDTO getCommentById(Long id) {
-        Comment comment = commentRepository.findById(id)
-                .orElseThrow(() -> new CommentNotFoundException(id.toString()));
+        Comment comment = commentServiceHelper.getCommentByIdOrThrow(id);
         return convertToDTO(comment);
     }
 

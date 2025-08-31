@@ -1,5 +1,8 @@
 package com.website.backend.common.exception;
 
+// 已移动到 com.website.backend.article.exception.ArticleNotFoundException
+// 请使用新的异常类位置
+
 import org.springframework.http.HttpStatus;
 
 /**

@@ -5,12 +5,13 @@ import org.slf4j.LoggerFactory;
 import com.website.backend.article.entity.Article;
 import com.website.backend.article.repository.ArticleRepository;
 import com.website.backend.article.service.ArticleService;
+import com.website.backend.article.service.ArticleServiceHelper;
 import com.website.backend.file.service.AttachmentService;
 import com.website.backend.file.service.ArticlePictureService;
 
 import com.website.backend.file.exception.FileProcessingException;
-import com.website.backend.common.exception.ArticleNotFoundException;
-import com.website.backend.common.exception.DraftNotFoundException;
+import com.website.backend.article.exception.ArticleNotFoundException;
+import com.website.backend.article.exception.DraftNotFoundException;
 import com.website.backend.common.exception.ValidationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,13 +33,16 @@ public class ArticleServiceImpl implements ArticleService {
 	private final ArticleRepository articleRepository;
 	private final AttachmentService attachmentService;
 	private final ArticlePictureService articlePictureService;
+	private final ArticleServiceHelper articleServiceHelper;
 
 	public ArticleServiceImpl(ArticleRepository articleRepository, 
 			AttachmentService attachmentService,
-			ArticlePictureService articlePictureService) {
+			ArticlePictureService articlePictureService,
+			ArticleServiceHelper articleServiceHelper) {
 		this.articleRepository = articleRepository;
 		this.attachmentService = attachmentService;
 		this.articlePictureService = articlePictureService;
+		this.articleServiceHelper = articleServiceHelper;
 	}
 
 	@Override
@@ -53,8 +57,7 @@ public class ArticleServiceImpl implements ArticleService {
 
 	@Override
 	public Article getArticleById(UUID articleId) {
-		Optional<Article> article = articleRepository.findByArticleId(articleId);
-		return article.orElseThrow(() -> new ArticleNotFoundException(articleId.toString()));
+		return articleServiceHelper.getArticleByIdOrThrow(articleId);
 	}
 	
 	@Override
@@ -105,7 +108,7 @@ public class ArticleServiceImpl implements ArticleService {
 	@Transactional
 	public Article updateArticle(UUID articleId, String title, String category, String content, boolean deleteAttachment,
 			boolean deletePicture, MultipartFile attachment, MultipartFile picture) {
-		Article existingArticle = getArticleById(articleId);
+		Article existingArticle = articleServiceHelper.getArticleByIdOrThrow(articleId);
 
 		// 更新基本信息
 		existingArticle.setTitle(title);
@@ -150,7 +153,7 @@ public class ArticleServiceImpl implements ArticleService {
 
 	@Override
 	public void deleteArticle(UUID articleId) {
-		Article article = getArticleById(articleId);
+		Article article = articleServiceHelper.getArticleByIdOrThrow(articleId);
 
 		try {
 			// 删除关联的附件

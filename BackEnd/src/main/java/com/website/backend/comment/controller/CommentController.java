@@ -2,6 +2,7 @@ package com.website.backend.comment.controller;
 
 import com.website.backend.article.dto.CommentDTO;
 import com.website.backend.comment.service.CommentService;
+import com.website.backend.comment.service.CommentServiceHelper;
 import com.website.backend.common.model.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,9 @@ public class CommentController {
 
     @Autowired
     private CommentService commentService;
+    
+    @Autowired
+    private CommentServiceHelper commentServiceHelper;
 
     @GetMapping("/article/{articleId}")
     public ResponseEntity<ApiResponse<List<CommentDTO>>> getCommentsByArticleId(@PathVariable Long articleId) {
