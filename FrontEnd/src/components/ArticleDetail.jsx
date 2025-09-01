@@ -1,10 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { format } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
+import { MessageCircle, Calendar, User, Tag, Paperclip, Download, ArrowLeft, ThumbsUp, Send } from 'lucide-react';
 import { getArticle, likeArticle, getComments, addComment, addReply, downloadAttachment } from '@/services/api';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, Tag, ThumbsUp, MessageCircle, ArrowLeft, Download } from 'lucide-react';
+import config from '@/config';
+
+const { API_BASE_URL } = config.development;
 
 const ArticleDetail = () => {
   const { id } = useParams();
@@ -32,9 +40,51 @@ const ArticleDetail = () => {
   const article = articleData?.data;
   const comments = commentsData?.data || [];
 
+  // 映射时间字段，确保前端使用正确的字段名
+  const mappedArticle = article ? {
+    ...article,
+    createTime: article.createdAt || article.createTime,
+    updateTime: article.updatedAt || article.updateTime
+  } : null;
+
   // 确保tags和attachments是数组类型
-  const safeTags = Array.isArray(article?.tags) ? article.tags : [];
-  const safeAttachments = Array.isArray(article?.attachments) ? article.attachments : [];
+  const safeTags = Array.isArray(mappedArticle?.tags) ? mappedArticle.tags : [];
+  const safeAttachments = Array.isArray(mappedArticle?.attachments) ? mappedArticle.attachments : [];
+
+  // 构建封面图片URL
+  const getCoverImageUrl = (coverImage) => {
+    if (!coverImage || coverImage === 'false') {
+      return null;
+    }
+    if (typeof coverImage === 'boolean' && coverImage === true) {
+      return `${API_BASE_URL}/images/article/${id}/cover/download`;
+    }
+    if (coverImage === 'true') {
+      return `${API_BASE_URL}/images/article/${id}/cover/download`;
+    }
+    if (coverImage.startsWith('http')) {
+      return coverImage;
+    }
+    // 处理相对路径
+    if (coverImage.startsWith('/')) {
+      return `${API_BASE_URL}${coverImage}`;
+    }
+    if (coverImage.startsWith('D:\\')) {
+      // 转换本地路径为URL
+      const filename = coverImage.split('\\').pop();
+      return `${API_BASE_URL}/images/article/${id}/cover/download`;
+    }
+    return coverImage;
+  };
+
+  // 构建附件下载URL
+  const getAttachmentUrl = (attachment) => {
+    if (attachment.filePath && attachment.filePath.startsWith('D:\\')) {
+      // 转换本地路径为下载URL
+      return `http://localhost:8081/api/attachments/download/${attachment.attachmentId || attachment.id}`;
+    }
+    return attachment.filePath || `http://localhost:8081/api/attachments/download/${attachment.attachmentId || attachment.id}`;
+  };
 
   // 点赞文章
   const likeMutation = useMutation({
@@ -77,11 +127,11 @@ const ArticleDetail = () => {
   });
 
   useEffect(() => {
-    if (article) {
-      setIsLiked(article.liked || false);
-      setLikes(article.likes || 0);
+    if (mappedArticle) {
+      setIsLiked(mappedArticle.liked || false);
+      setLikes(mappedArticle.likes || 0);
     }
-  }, [article]);
+  }, [mappedArticle]);
 
   const handleLike = () => {
     if (!isLiked) {
@@ -103,18 +153,81 @@ const ArticleDetail = () => {
 
   const handleDownload = async (attachment) => {
     try {
-      const response = await downloadAttachment(attachment.id);
-      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      // 使用API下载
+      const response = await downloadAttachment(attachment.attachmentId || attachment.id);
+      
+      // 从响应头中获取文件名
+      let filename = attachment.fileName || attachment.name;
+      
+      // 尝试从不同的响应头字段获取文件名
+      const headers = response.headers || {};
+      
+      // 打印所有响应头以调试
+      console.log('All response headers:', headers);
+      
+      // 尝试多种方式获取Content-Disposition头
+      let contentDisposition = null;
+      if (headers['content-disposition']) {
+        contentDisposition = headers['content-disposition'];
+      } else if (headers['Content-Disposition']) {
+        contentDisposition = headers['Content-Disposition'];
+      } else if (headers['Content-disposition']) {
+        contentDisposition = headers['Content-disposition'];
+      }
+      
+      console.log('Content-Disposition header:', contentDisposition);
+      
+      if (contentDisposition) {
+        // 尝试匹配 filename*=UTF-8'' 格式（支持中文等特殊字符）
+        const utf8FilenameMatch = contentDisposition.match(/filename\*=UTF-8''(.+)$/);
+        if (utf8FilenameMatch && utf8FilenameMatch[1]) {
+          try {
+            filename = decodeURIComponent(utf8FilenameMatch[1]);
+            console.log('Using UTF-8 decoded filename:', filename);
+          } catch (e) {
+            console.warn('Failed to decode UTF-8 filename', e);
+          }
+        } else {
+          // 尝试匹配常规的 filename 格式
+          const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1];
+            console.log('Using matched filename:', filename);
+          }
+        }
+      } else {
+        // 如果没有Content-Disposition头，尝试从调试头获取文件名
+        if (headers['x-debug-original-filename']) {
+          filename = headers['x-debug-original-filename'];
+          console.log('Using debug filename:', filename);
+        }
+      }
+      
+      console.log('Final filename for download:', filename);
+      
+      // 创建Blob对象
+      const contentType = headers['content-type'] || 'application/octet-stream';
+      const blob = new Blob([response.data], { type: contentType });
+      
+      // 创建下载链接
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = attachment.name;
+      link.download = filename || (attachment.fileName || attachment.name);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('下载失败:', error);
+      // 提供一个默认的文件名以防万一
+      const fallbackFilename = attachment.fileName || attachment.name || 'attachment';
+      const link = document.createElement('a');
+      link.href = `http://localhost:8081/api/attachments/download/${attachment.attachmentId || attachment.id}`;
+      link.download = fallbackFilename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     }
   };
 
@@ -191,15 +304,15 @@ const ArticleDetail = () => {
       </Button>
       
       <article className="prose prose-lg max-w-none">
-        <h1 className="text-3xl font-bold mb-4">{article.title}</h1>
+        <h1 className="text-3xl font-bold mb-4">{mappedArticle.title}</h1>
         
         <div className="flex flex-wrap items-center gap-4 mb-6 text-gray-600">
           <div className="flex items-center">
             <Calendar className="w-4 h-4 mr-1" />
-            {article.createTime ? formatDate(article.createTime) : '未知时间'}
+            {mappedArticle.createTime ? formatDate(mappedArticle.createTime) : '未知时间'}
           </div>
           <div className="flex items-center">
-            <span className="font-medium">{article.author}</span>
+            <span className="font-medium">{mappedArticle.author}</span>
           </div>
           <div className="flex items-center">
             <Button 
@@ -214,16 +327,16 @@ const ArticleDetail = () => {
           </div>
         </div>
         
-        {(article.coverImage && article.coverImage !== 'false') ? (
+        {getCoverImageUrl(mappedArticle.coverImage) ? (
           <img 
-            src={article.coverImage} 
-            alt={article.title} 
+            src={getCoverImageUrl(mappedArticle.coverImage)} 
+            alt={mappedArticle.title} 
             className="w-full h-96 object-cover rounded-lg mb-8"
           />
         ) : (
           <img 
             src="/resource/pic/cover.png" 
-            alt={article.title} 
+            alt={mappedArticle.title} 
             className="w-full h-96 object-cover rounded-lg mb-8"
           />
         )}
@@ -241,7 +354,7 @@ const ArticleDetail = () => {
         
         <div 
           className="mb-8"
-          dangerouslySetInnerHTML={{ __html: article.content }} 
+          dangerouslySetInnerHTML={{ __html: mappedArticle.content }} 
         />
         
         {safeAttachments.length > 0 && (
@@ -261,10 +374,13 @@ const ArticleDetail = () => {
                 <h3 className="text-xl font-semibold mb-4">附件</h3>
                 <div className="space-y-3">
                   {safeAttachments.map((attachment) => (
-                    <div key={attachment.id || attachment.name} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div key={attachment.attachmentId || attachment.id || attachment.name} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
-                        <h4 className="font-medium">{attachment.name}</h4>
-                        <p className="text-sm text-gray-600">{attachment.size} • 下载次数: {attachment.downloadCount}</p>
+                        <h4 className="font-medium">{attachment.fileName || attachment.name}</h4>
+                        <p className="text-sm text-gray-600">
+                          {attachment.fileSize || attachment.size} • 
+                          下载次数: {attachment.downloadCount || 0}
+                        </p>
                       </div>
                       <Button 
                         variant="outline" 

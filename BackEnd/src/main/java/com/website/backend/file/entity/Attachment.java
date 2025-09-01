@@ -31,10 +31,15 @@ public class Attachment {
 	@ManyToOne
 	@JoinColumn(name = "article_id", nullable = false)
 	private Article article;
+	
+	// 下载次数字段，不直接存储在数据库中，而是通过Redis获取
+	@Transient
+	private Long downloadCount = 0L;
 
 	public Attachment() {
 	}
 	
+	// Getter和Setter方法
 	public Long getAttachmentId() {
 		return attachmentId;
 	}
@@ -89,5 +94,13 @@ public class Attachment {
 	
 	public void setArticle(Article article) {
 		this.article = article;
+	}
+	
+	public Long getDownloadCount() {
+		return downloadCount;
+	}
+	
+	public void setDownloadCount(Long downloadCount) {
+		this.downloadCount = downloadCount;
 	}
 }

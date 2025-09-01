@@ -3,6 +3,9 @@ package com.website.backend.file.controller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -96,6 +99,34 @@ public class ImageController {
             return ApiResponse.success(picture.get());
         } else {
             return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, "封面图片不存在");
+        }
+    }
+
+    @GetMapping("/article/{articleId}/cover/download")
+    public ResponseEntity<byte[]> downloadArticleCover(@PathVariable Long articleId) {
+        try {
+            Optional<Article> articleOpt = articleRepository.findById(articleId);
+            if (articleOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Article article = articleOpt.get();
+            Optional<ArticlePicture> picture = articlePictureRepository.findByArticle(article);
+            
+            // 简化判断逻辑，只要文章有关联的图片就返回
+            if (picture.isPresent()) {
+                byte[] imageContent = articlePictureService.downloadPicture(picture.get().getPictureId());
+                
+                return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_TYPE, picture.get().getFileType())
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + picture.get().getFileName() + "\"")
+                    .body(imageContent);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            logger.error("下载文章封面图片失败: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

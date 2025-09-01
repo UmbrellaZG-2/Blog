@@ -205,19 +205,49 @@ const NewArticle = () => {
                   accept="image/*"
                   onChange={handleCoverImageChange}
                   className="flex-1"
+                  id="cover-image-input"
+                  style={{ display: 'none' }}
                 />
-                <Button type="button" variant="outline">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => {
+                    console.log('选择图片按钮被点击');
+                    const input = document.getElementById('cover-image-input');
+                    console.log('找到文件输入元素:', input);
+                    if (input) {
+                      input.click();
+                      console.log('触发了文件选择');
+                    } else {
+                      console.error('未找到文件输入元素');
+                    }
+                  }}
+                >
                   <Upload className="w-4 h-4 mr-2" />
                   选择图片
                 </Button>
               </div>
               {coverImagePreview && (
-                <div className="mt-2">
+                <div className="mt-2 relative">
                   <img 
                     src={coverImagePreview} 
                     alt="封面预览" 
                     className="mx-auto object-cover w-full h-48 rounded-lg"
                   />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={() => {
+                      setCoverImage(null);
+                      setCoverImagePreview(null);
+                      document.getElementById('cover-image-input').value = '';
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                    取消选择
+                  </Button>
                 </div>
               )}
             </div>
@@ -248,17 +278,33 @@ const NewArticle = () => {
                   选择附件文件
                 </label>
                 <div className="flex items-center gap-2">
-                  <Input
-                    type="file"
-                    multiple
-                    onChange={handleFileChange}
-                    className="flex-1"
-                  />
-                  <Button type="button" variant="outline">
-                    <Upload className="w-4 h-4 mr-2" />
-                    选择文件
-                  </Button>
-                </div>
+                <Input
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  className="flex-1"
+                  id="file-input"
+                  style={{ display: 'none' }}
+                />
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => {
+                    console.log('选择文件按钮被点击');
+                    const input = document.getElementById('file-input');
+                    console.log('找到文件输入元素:', input);
+                    if (input) {
+                      input.click();
+                      console.log('触发了文件选择');
+                    } else {
+                      console.error('未找到文件输入元素');
+                    }
+                  }}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  选择文件
+                </Button>
+              </div>
                 <p className="text-sm text-gray-500 mt-1">
                   支持上传多个文件，单个文件大小不超过10MB
                 </p>

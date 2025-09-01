@@ -10,6 +10,7 @@ import com.website.backend.system.service.RateLimitService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +22,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/attachments")
@@ -42,6 +46,12 @@ public class AttachmentController {
 
 	@Autowired
 	private RateLimitService rateLimitService;
+	
+	@Autowired
+	private RedisTemplate<String, Object> redisTemplate;
+	
+	// 附件下载次数的Redis键前缀
+	private static final String ATTACHMENT_DOWNLOAD_COUNT_PREFIX = "attachment:download:count:";
 
 	@GetMapping("/download/{attachmentId}")
 	public void downloadAttachment(@PathVariable Long attachmentId, HttpServletRequest request,
@@ -61,23 +71,55 @@ public class AttachmentController {
 			return;
 		}
 		try {
+			logger.info("开始下载附件，附件ID: {}", attachmentId);
 			Attachment attachment = attachmentRepository.findById(attachmentId)
 				.orElseThrow(() -> new IOException("Attachment not found"));
+			
+			logger.info("找到附件记录，文件名: {}, 文件路径: {}", attachment.getFileName(), attachment.getFilePath());
 			byte[] fileContent = attachmentService.downloadAttachment(attachmentId);
 
-			// 设置响应头
-			response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
-			response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
-					"attachment; filename=\"" + attachment.getFileName() + "\"");
-			response.setContentLength(fileContent.length);
+			// 增加附件下载次数
+			String downloadCountKey = ATTACHMENT_DOWNLOAD_COUNT_PREFIX + attachmentId;
+			redisTemplate.opsForValue().increment(downloadCountKey, 1);
+			// 设置过期时间，避免键永久存在（例如设置为30天）
+			redisTemplate.expire(downloadCountKey, 30, TimeUnit.DAYS);
 
+			// 使用原始文件名
+			String fileName = attachment.getFileName();
+			
+			// 对文件名进行URL编码以支持中文等特殊字符
+			String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.toString())
+					.replaceAll("\\+", "%20");
+			
+			// 设置Content-Disposition头，支持中文文件名
+			String contentDisposition = "attachment; filename=\"" + fileName + "\"; filename*=UTF-8''" + encodedFileName;
+			
+			// 添加调试信息到响应头
+			response.setHeader("X-Debug-Attachment-Id", String.valueOf(attachmentId));
+			response.setHeader("X-Debug-Original-Filename", fileName);
+			
+			// 允许前端访问Content-Disposition头和调试头
+			response.setHeader("Access-Control-Expose-Headers", 
+			    "Content-Disposition, X-Debug-Attachment-Id, X-Debug-Original-Filename");
+			
+			// 设置响应头（注意顺序很重要）
+			response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+			response.setHeader(HttpHeaders.CONTENT_DISPOSITION, contentDisposition);
+			response.setContentLength(fileContent.length);
+			
+			// 添加调试日志
+			logger.info("下载附件信息 - ID: {}, 原始文件名: {}, Content-Disposition: {}", 
+			           attachmentId, fileName, contentDisposition);
+			
 			// 写入响应体
 			try (OutputStream os = response.getOutputStream()) {
 				os.write(fileContent);
 				os.flush();
 			}
+			logger.info("附件下载完成，附件ID: {}", attachmentId);
 		}
 		catch (IOException e) {
+			logger.error("附件不存在，附件ID: {}, 错误信息: {}", attachmentId, e.getMessage());
 			response.setStatus(HttpStatusConstants.NOT_FOUND);
 			try {
 				response.getWriter().write("附件不存在: " + e.getMessage());
@@ -87,6 +129,7 @@ public class AttachmentController {
 			}
 		}
 		catch (Exception e) {
+			logger.error("下载附件失败，附件ID: {}", attachmentId, e);
 			response.setStatus(HttpStatusConstants.INTERNAL_SERVER_ERROR);
 			try {
 				response.getWriter().write("下载附件失败: " + e.getMessage());
@@ -162,6 +205,24 @@ public class AttachmentController {
 					.orElseThrow(() -> new RuntimeException("文章不存在"));
 			// 使用attachmentRepository查询该文章的所有附件
 			List<Attachment> attachments = attachmentRepository.findByArticle(article);
+			
+			// 为每个附件添加下载次数信息
+			for (Attachment attachment : attachments) {
+				String downloadCountKey = ATTACHMENT_DOWNLOAD_COUNT_PREFIX + attachment.getAttachmentId();
+				Object countObj = redisTemplate.opsForValue().get(downloadCountKey);
+				// 如果Redis中没有记录，则默认为0
+				long downloadCount = 0L;
+				if (countObj != null) {
+					// 处理可能的Integer或Long类型
+					if (countObj instanceof Integer) {
+						downloadCount = ((Integer) countObj).longValue();
+					} else if (countObj instanceof Long) {
+						downloadCount = (Long) countObj;
+					}
+				}
+				attachment.setDownloadCount(downloadCount);
+			}
+			
 			Map<String, Object> response = new HashMap<>();
 			response.put("success", true);
 			response.put("message", "获取附件列表成功");

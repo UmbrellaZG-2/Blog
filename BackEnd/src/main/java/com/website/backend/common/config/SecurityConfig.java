@@ -53,7 +53,7 @@ public class SecurityConfig {
 			"http://localhost:8081",
 			"http://localhost:8082", 
 			"http://localhost:8083",
-			"http://localhost:5173"));
+			"http://localhost:8082"));
 		configuration.addAllowedMethod("*");
 		configuration.addAllowedHeader("*");
 		configuration.setAllowCredentials(true);

@@ -11,6 +11,7 @@ import com.website.backend.file.repository.AttachmentRepository;
 import com.website.backend.system.repository.SystemConfigRepository;
 import com.website.backend.file.service.AttachmentService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
@@ -39,6 +40,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 	}
 
 	@Override
+	@Transactional
 	public Attachment uploadAttachment(MultipartFile file, Article article) throws IOException {
 		int maxAttachCount = getMaxAttachmentCount();
 		int currentAttachCount = getCurrentAttachmentCount(article);
@@ -92,6 +94,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 	}
 
 	@Override
+	@Transactional
 	public byte[] downloadAttachment(Long attachmentId) throws IOException {
 		log.debug("开始下载附件，附件ID: {}", attachmentId);
 		Attachment attachment = attachmentRepository.findById(attachmentId).orElseThrow(() -> {
@@ -104,6 +107,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 	}
 
 	@Override
+	@Transactional
 	public void deleteAttachment(Long attachmentId) {
 		log.debug("开始删除附件，附件ID: {}", attachmentId);
 		Attachment attachment = attachmentRepository.findById(attachmentId).orElseThrow(() -> {
@@ -139,6 +143,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 	}
 
 	@Override
+	@Transactional
 	public void deleteAttachmentsByArticle(Article article) {
 		log.info("开始删除文章相关的所有附件，文章ID: {}", article.getId());
 		java.util.List<Attachment> attachments = attachmentRepository.findByArticle(article);
