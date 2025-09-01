@@ -1,138 +1,120 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getArticle, likeArticle, getComments, addComment, addReply, downloadAttachment } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, Tag, Download, ArrowLeft, ThumbsUp, MessageCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { downloadAttachment, getComments, addComment, likeArticle, unlikeArticle, getArticleLikes, checkUserLikedArticle } from '@/services/api';
+import { Calendar, Tag, ThumbsUp, MessageCircle, ArrowLeft, Download } from 'lucide-react';
 
-const ArticleDetail = ({ article }) => {
+const ArticleDetail = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [likes, setLikes] = useState(article?.likes || 0);
-  const [isLiked, setIsLiked] = useState(false);
-  const [comments, setComments] = useState([]);
+  const queryClient = useQueryClient();
+  
   const [newComment, setNewComment] = useState('');
-  const [replyingTo, setReplyingTo] = useState(null);
   const [replyContent, setReplyContent] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likes, setLikes] = useState(0);
+
+  // 获取文章详情
+  const { data: articleData, isLoading, error } = useQuery({
+    queryKey: ['article', id],
+    queryFn: () => getArticle(id),
+  });
+
+  // 获取评论
+  const { data: commentsData, isLoading: commentsLoading } = useQuery({
+    queryKey: ['comments', id],
+    queryFn: () => getComments(id),
+  });
+
+  const article = articleData?.data;
+  const comments = commentsData?.data || [];
+
+  // 确保tags和attachments是数组类型
+  const safeTags = Array.isArray(article?.tags) ? article.tags : [];
+  const safeAttachments = Array.isArray(article?.attachments) ? article.attachments : [];
+
+  // 点赞文章
+  const likeMutation = useMutation({
+    mutationFn: () => likeArticle(id),
+    onSuccess: () => {
+      setIsLiked(true);
+      setLikes(prev => prev + 1);
+    },
+    onError: (error) => {
+      console.error('点赞失败:', error);
+      alert('点赞失败，请稍后重试');
+    },
+  });
+
+  // 添加评论
+  const addCommentMutation = useMutation({
+    mutationFn: (content) => addComment(id, { content }),
+    onSuccess: () => {
+      setNewComment('');
+      queryClient.invalidateQueries(['comments', id]);
+    },
+    onError: (error) => {
+      console.error('评论失败:', error);
+      alert('评论失败，请稍后重试');
+    },
+  });
+
+  // 添加回复
+  const addReplyMutation = useMutation({
+    mutationFn: ({ commentId, content }) => addReply(commentId, content),
+    onSuccess: () => {
+      setReplyContent('');
+      setReplyingTo(null);
+      queryClient.invalidateQueries(['comments', id]);
+    },
+    onError: (error) => {
+      console.error('回复失败:', error);
+      alert('回复失败，请稍后重试');
+    },
+  });
 
   useEffect(() => {
-    if (article && article.id) {
-      loadComments();
-      loadLikes();
+    if (article) {
+      setIsLiked(article.liked || false);
+      setLikes(article.likes || 0);
     }
   }, [article]);
 
-  if (!article) {
-    return <div>文章未找到</div>;
-  }
-
-  // 确保tags是数组类型
-  const safeTags = Array.isArray(article.tags) ? article.tags : [];
-  // 确保attachments是数组类型
-  const safeAttachments = Array.isArray(article.attachments) ? article.attachments : [];
-
-  const handleLike = async () => {
-    try {
-      if (isLiked) {
-        await unlikeArticle(article.id);
-        setLikes(likes - 1);
-      } else {
-        await likeArticle(article.id);
-        setLikes(likes + 1);
-      }
-      setIsLiked(!isLiked);
-    } catch (error) {
-      toast.error(`点赞操作失败: ${error.message}`);
+  const handleLike = () => {
+    if (!isLiked) {
+      likeMutation.mutate();
     }
   };
 
-  const loadLikes = async () => {
-    try {
-      const likesResponse = await getArticleLikes(article.id);
-      if (likesResponse.success) {
-        setLikes(likesResponse.data);
-      }
-      
-      const likedResponse = await checkUserLikedArticle(article.id);
-      if (likedResponse.success) {
-        setIsLiked(likedResponse.data);
-      }
-    } catch (error) {
-      console.error('加载点赞信息失败:', error);
+  const handleAddComment = () => {
+    if (newComment.trim()) {
+      addCommentMutation.mutate(newComment.trim());
+    }
+  };
+
+  const handleAddReply = (commentId) => {
+    if (replyContent.trim()) {
+      addReplyMutation.mutate({ commentId, content: replyContent.trim() });
     }
   };
 
   const handleDownload = async (attachment) => {
     try {
-      toast.info(`正在下载 ${attachment.name}`);
-      const blob = await downloadAttachment(attachment.id);
-      
-      // 创建下载链接
-      const url = window.URL.createObjectURL(new Blob([blob]));
+      const response = await downloadAttachment(attachment.id);
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', attachment.name);
+      link.download = attachment.name;
       document.body.appendChild(link);
       link.click();
-      
-      // 清理
-      link.parentNode.removeChild(link);
+      link.remove();
       window.URL.revokeObjectURL(url);
-      
-      toast.success(`${attachment.name} 下载成功`);
     } catch (error) {
-      toast.error(`下载失败: ${error.message}`);
-    }
-  };
-
-  const handleAddComment = async () => {
-    if (!newComment.trim()) return;
-    
-    try {
-      const formData = new FormData();
-      formData.append('content', newComment);
-      
-      const response = await addComment(article.id, formData);
-      
-      if (response.success) {
-        setNewComment('');
-        loadComments();
-        toast.success('评论发表成功');
-      }
-    } catch (error) {
-      toast.error(`评论发表失败: ${error.message}`);
-    }
-  };
-
-  const handleAddReply = async (parentId) => {
-    if (!replyContent.trim()) return;
-    
-    try {
-      const formData = new FormData();
-      formData.append('content', replyContent);
-      formData.append('parentId', parentId);
-      
-      const response = await addComment(article.id, formData);
-      
-      if (response.success) {
-        setReplyContent('');
-        setReplyingTo(null);
-        loadComments();
-        toast.success('回复发表成功');
-      }
-    } catch (error) {
-      toast.error(`回复发表失败: ${error.message}`);
-    }
-  };
-
-  const loadComments = async () => {
-    try {
-      const response = await getComments(article.id);
-      if (response.success) {
-        setComments(response.data);
-      }
-    } catch (error) {
-      toast.error(`加载评论失败: ${error.message}`);
+      console.error('下载失败:', error);
     }
   };
 
@@ -249,7 +231,7 @@ const ArticleDetail = ({ article }) => {
         <div className="mb-8">
           <div className="flex flex-wrap gap-2 mb-6">
             {safeTags.map((tag) => (
-              <span key={tag.id} className="flex items-center text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+              <span key={tag.id || tag.name} className="flex items-center text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
                 <Tag className="w-3 h-3 mr-1" />
                 {tag.name}
               </span>
@@ -279,7 +261,7 @@ const ArticleDetail = ({ article }) => {
                 <h3 className="text-xl font-semibold mb-4">附件</h3>
                 <div className="space-y-3">
                   {safeAttachments.map((attachment) => (
-                    <div key={attachment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div key={attachment.id || attachment.name} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <h4 className="font-medium">{attachment.name}</h4>
                         <p className="text-sm text-gray-600">{attachment.size} • 下载次数: {attachment.downloadCount}</p>

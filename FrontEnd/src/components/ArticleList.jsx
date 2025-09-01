@@ -42,7 +42,7 @@ const ArticleList = ({ articles = [] }) => {
             <p className="text-gray-600 mb-4 line-clamp-3">{article.summary}</p>
             <div className="flex flex-wrap gap-2 mb-4">
               {Array.isArray(article.tags) && article.tags.map((tag) => (
-                <span key={tag.id} className="flex items-center text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                <span key={tag.id || tag.name} className="flex items-center text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                   <Tag className="w-3 h-3 mr-1" />
                   {tag.name}
                 </span>

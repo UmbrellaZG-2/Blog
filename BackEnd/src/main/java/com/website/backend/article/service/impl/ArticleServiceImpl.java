@@ -61,8 +61,8 @@ public class ArticleServiceImpl implements ArticleService {
 	}
 	
 	@Override
-	public Article createArticle(String title, String category, String content, MultipartFile attachment,
-			MultipartFile picture) {
+	public Article createArticle(String title, String category, String content, String summary,
+			String tags, String status, MultipartFile coverImage, MultipartFile[] attachments) {
 		// 参数验证
 		if (title == null || title.trim().isEmpty()) {
 			throw new ValidationException("标题不能为空");
@@ -78,6 +78,9 @@ public class ArticleServiceImpl implements ArticleService {
 		article.setTitle(title);
 		article.setCategory(category);
 		article.setContent(content);
+		article.setSummary(summary != null ? summary : "");
+		article.setTags(tags != null ? tags : "");
+		article.setStatus(status != null ? status : "draft");
 		article.setCreateTime(LocalDateTime.now());
 		article.setUpdateTime(LocalDateTime.now());
 		article.setViewCount(0L);
@@ -86,16 +89,20 @@ public class ArticleServiceImpl implements ArticleService {
 		try {
 			Article savedArticle = articleRepository.save(article);
 
-			// 处理附件上传
-			if (attachment != null && !attachment.isEmpty()) {
-				attachmentService.uploadAttachment(attachment, savedArticle);
-				savedArticle.setHasAttachment(true);
+			// 处理封面图片上传
+			if (coverImage != null && !coverImage.isEmpty()) {
+				articlePictureService.uploadPicture(coverImage, savedArticle);
+				savedArticle.setHasCoverImage(true);
 			}
 
-			// 处理图片上传
-			if (picture != null && !picture.isEmpty()) {
-				articlePictureService.uploadPicture(picture, savedArticle);
-				savedArticle.setHasCoverImage(true);
+			// 处理附件上传
+			if (attachments != null && attachments.length > 0) {
+				for (MultipartFile attachment : attachments) {
+					if (attachment != null && !attachment.isEmpty()) {
+						attachmentService.uploadAttachment(attachment, savedArticle);
+						savedArticle.setHasAttachment(true);
+					}
+				}
 			}
 
 			return articleRepository.save(savedArticle);

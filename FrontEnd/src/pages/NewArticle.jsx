@@ -1,22 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { createArticle } from '@/services/api';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save, Eye, Upload, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Save, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { createArticle, uploadAttachment, uploadCoverImage, saveDraft } from '@/services/api';
 
 const NewArticle = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     summary: '',
@@ -25,15 +22,31 @@ const NewArticle = () => {
     tags: '',
     status: 'draft'
   });
-  const [attachments, setAttachments] = useState([]);
   const [coverImage, setCoverImage] = useState(null);
-  const [coverImagePreview, setCoverImagePreview] = useState('');
+  const [coverImagePreview, setCoverImagePreview] = useState(null);
+  const [attachments, setAttachments] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 权限验证
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+    } else {
+      setIsAuthorized(true);
+    }
+  }, [navigate]);
+
+  // 固定分类选项
   const categories = [
-    { id: 'tech', name: '技术' },
-    { id: 'game', name: '游戏' }
+    { id: 'technology', name: '技术' },
+    { id: 'entertainment', name: '娱乐' },
+    { id: 'other', name: '其他' }
   ];
+
+  if (!isAuthorized) {
+    return <div className="container mx-auto px-4 py-8">加载中...</div>;
+  }
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -46,10 +59,11 @@ const NewArticle = () => {
     const file = e.target.files[0];
     if (file) {
       setCoverImage(file);
-      
-      // 生成预览URL
-      const previewUrl = URL.createObjectURL(file);
-      setCoverImagePreview(previewUrl);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setCoverImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -57,12 +71,10 @@ const NewArticle = () => {
     const files = Array.from(e.target.files);
     const newAttachments = files.map(file => ({
       id: Date.now() + Math.random(),
-      file,
       name: file.name,
-      size: `${(file.size / 1024).toFixed(2)} KB`,
-      type: file.type
+      size: (file.size / 1024 / 1024).toFixed(2) + 'MB',
+      file: file
     }));
-    
     setAttachments(prev => [...prev, ...newAttachments]);
   };
 
@@ -73,91 +85,50 @@ const NewArticle = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
-      // 基本验证
-      if (!formData.title.trim()) {
-        toast.error('请输入文章标题');
-        setIsSubmitting(false);
-        return;
-      }
+      const submitData = new FormData();
       
-      if (!formData.content.trim()) {
-        toast.error('请输入文章内容');
-        setIsSubmitting(false);
-        return;
+      // 添加基本表单数据
+      Object.keys(formData).forEach(key => {
+        submitData.append(key, formData[key]);
+      });
+
+      // 处理标签格式
+      if (formData.tags) {
+        submitData.append('tags', formData.tags.split(',').map(tag => tag.trim()).join(','));
       }
 
-      // 准备文章数据
-      const articleData = {
-        title: formData.title,
-        summary: formData.summary,
-        content: formData.content,
-        category: formData.category,
-        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
-        status: formData.status
-      };
-
-      // 根据状态选择创建文章或保存草稿
-      let response;
-      if (formData.status === 'published') {
-        response = await createArticle(articleData);
-      } else {
-        response = await saveDraft(articleData);
+      // 添加封面图片
+      if (coverImage) {
+        submitData.append('coverImage', coverImage);
       }
+
+      // 添加附件
+      attachments.forEach(attachment => {
+        submitData.append('attachments', attachment.file);
+      });
+
+      const response = await createArticle(submitData);
       
       if (response.success) {
-        const articleId = response.data.id;
-        
-        // 上传封面图片（如果有）
-        if (coverImage) {
-          try {
-            await uploadCoverImage(articleId, coverImage);
-          } catch (error) {
-            console.error('封面图片上传失败:', error);
-            toast.warning('封面图片上传失败，但文章已保存');
-          }
-        }
-        
-        // 上传附件（如果有）
-        if (attachments.length > 0) {
-          try {
-            for (const attachment of attachments) {
-              const formData = new FormData();
-              formData.append('file', attachment.file);
-              formData.append('articleId', articleId);
-              await uploadAttachment(formData);
-            }
-          } catch (error) {
-            console.error('附件上传失败:', error);
-            toast.warning('部分附件上传失败，但文章已保存');
-          }
-        }
-        
-        toast.success('文章保存成功！');
-        navigate('/admin/articles');
+        toast.success('文章创建成功');
+        queryClient.invalidateQueries(['adminArticles']);
+        window.location.href = 'http://localhost:8082/#/admin/articles';
       } else {
-        toast.error(`文章保存失败：${response.message}`);
+        toast.error(`创建失败：${response.message}`);
       }
     } catch (error) {
-      toast.error(`文章保存失败：${error.message}`);
+      toast.error(`创建失败：${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handlePreview = () => {
-    if (!formData.title.trim() || !formData.content.trim()) {
-      toast.error('请先填写标题和内容');
-      return;
-    }
-    
-    // 模拟预览功能
-    toast.info('预览功能开发中...');
-  };
+
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <Button 
           variant="outline" 
@@ -168,20 +139,6 @@ const NewArticle = () => {
           返回文章管理
         </Button>
         <h1 className="text-2xl font-bold">新建文章</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePreview} disabled={isSubmitting}>
-            <Eye className="w-4 h-4 mr-2" />
-            预览
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? '保存中...' : (
-              <>
-                <Save className="w-4 h-4 mr-2" />
-                保存
-              </>
-            )}
-          </Button>
-        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -313,7 +270,7 @@ const NewArticle = () => {
                   <div className="space-y-2">
                     {attachments.map((attachment) => (
                       <div 
-                        key={attachment.id} 
+                        key={attachment.id || attachment.name} 
                         className="flex items-center justify-between p-3 border rounded-lg"
                       >
                         <div>

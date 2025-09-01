@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,12 +14,29 @@ const AdminComments = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingComment, setEditingComment] = useState(null);
   const [editContent, setEditContent] = useState('');
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  // 权限验证
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('请先登录');
+      navigate('/login');
+      return;
+    }
+    setIsAuthorized(true);
+  }, [navigate]);
 
   // 获取评论列表
   const { data: comments, isLoading, error } = useQuery({
     queryKey: ['adminComments'],
     queryFn: getAllComments,
+    enabled: isAuthorized
   });
+
+  if (!isAuthorized) {
+    return <div className="container mx-auto px-4 py-8">权限验证中...</div>;
+  }
 
   // 过滤评论
   const filteredComments = (comments?.data || []).filter(comment => 

@@ -29,7 +29,9 @@ public class GlobalExceptionHandler {
 	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
 	public ApiResponse<?> handleException(Exception e) {
 		logger.error("发生未预期的异常: {}", e.getMessage(), e);
-		return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "服务器内部错误: " + e.getMessage());
+		Map<String, Object> errorInfo = new HashMap<>();
+		errorInfo.put("errorCode", "SYS-5001");
+		return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "系统服务暂时不可用，请稍后再试", errorInfo);
 	}
 
 	// 处理资源未找到异常
@@ -98,9 +100,8 @@ public class GlobalExceptionHandler {
 	public ApiResponse<?> handleNoResourceFoundException(NoResourceFoundException e) {
 		logger.error("请求的资源未找到: {}", e.getMessage());
 		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", "RESOURCE_NOT_FOUND");
-		errorInfo.put("resourcePath", e.getResourcePath());
-		return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, "请求的资源不存在: " + e.getMessage(), errorInfo);
+		errorInfo.put("errorCode", "RES-3001");
+		return ApiResponse.fail(HttpStatusConstants.NOT_FOUND, "请求的资源不存在", errorInfo);
 	}
 
 	// 处理权限不足异常
@@ -119,8 +120,8 @@ public class GlobalExceptionHandler {
 	public ApiResponse<?> handleAuthenticationException(org.springframework.security.core.AuthenticationException e) {
 		logger.error("认证失败: {}", e.getMessage());
 		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", "AUTHENTICATION_FAILED");
-		return ApiResponse.fail(HttpStatusConstants.UNAUTHORIZED, "认证失败: " + e.getMessage(), errorInfo);
+		errorInfo.put("errorCode", "AUTH-1001");
+		return ApiResponse.fail(HttpStatusConstants.UNAUTHORIZED, "认证失败，请检查用户名或密码", errorInfo);
 	}
 
 	// 处理自定义认证异常
@@ -129,8 +130,8 @@ public class GlobalExceptionHandler {
 	public ApiResponse<?> handleCustomAuthenticationException(CustomAuthenticationException e) {
 		logger.error("自定义认证失败: {}", e.getMessage());
 		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", "AUTHENTICATION_FAILED");
-		return ApiResponse.fail(HttpStatusConstants.UNAUTHORIZED, "认证失败: " + e.getMessage(), errorInfo);
+		errorInfo.put("errorCode", "AUTH-1002");
+		return ApiResponse.fail(HttpStatusConstants.UNAUTHORIZED, "认证失败，请重新登录", errorInfo);
 	}
 
 	// 处理文件上传异常
@@ -139,8 +140,8 @@ public class GlobalExceptionHandler {
 	public ApiResponse<?> handleFileUploadException(FileUploadException e) {
 		logger.error("文件上传失败: {}", e.getMessage());
 		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", "FILE_UPLOAD_FAILED");
-		return ApiResponse.fail(HttpStatusConstants.BAD_REQUEST, "文件上传失败: " + e.getMessage(), errorInfo);
+		errorInfo.put("errorCode", "FILE-2001");
+		return ApiResponse.fail(HttpStatusConstants.BAD_REQUEST, "文件上传失败，请检查文件格式或大小", errorInfo);
 	}
 
 	// 处理文件处理异常
@@ -149,8 +150,8 @@ public class GlobalExceptionHandler {
 	public ApiResponse<?> handleFileProcessingException(FileProcessingException e) {
 		logger.error("文件处理失败: {}", e.getMessage());
 		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", "FILE_PROCESSING_FAILED");
-		return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "文件处理失败: " + e.getMessage(), errorInfo);
+		errorInfo.put("errorCode", "FILE-2002");
+		return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "文件处理失败，请稍后重试", errorInfo);
 	}
 
 	// 处理IO异常
@@ -159,8 +160,8 @@ public class GlobalExceptionHandler {
 	public ApiResponse<?> handleIOException(IOException e) {
 		logger.error("IO异常: {}", e.getMessage(), e);
 		Map<String, Object> errorInfo = new HashMap<>();
-		errorInfo.put("errorCode", "IO_ERROR");
-		return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "文件操作失败: " + e.getMessage(), errorInfo);
+		errorInfo.put("errorCode", "SYS-5002");
+		return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "系统IO操作失败，请稍后重试", errorInfo);
 	}
 
 	// 处理数据验证异常
@@ -181,5 +182,15 @@ public class GlobalExceptionHandler {
 		Map<String, Object> errorInfo = new HashMap<>();
 		errorInfo.put("errorCode", e.getErrorCode());
 		return ApiResponse.fail(e.getHttpStatus().value(), e.getMessage(), errorInfo);
+	}
+
+	// 处理类型转换异常
+	@ExceptionHandler(ClassCastException.class)
+	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+	public ApiResponse<?> handleClassCastException(ClassCastException e) {
+		logger.error("类型转换异常: {}", e.getMessage(), e);
+		Map<String, Object> errorInfo = new HashMap<>();
+		errorInfo.put("errorCode", "AUTH-1003");
+		return ApiResponse.fail(HttpStatusConstants.INTERNAL_SERVER_ERROR, "登录状态异常，请重新尝试", errorInfo);
 	}
 }

@@ -29,6 +29,15 @@ public class Article {
 	@Column(columnDefinition = "TEXT")
 	private String content;
 
+	@Column(columnDefinition = "TEXT")
+	private String summary;
+
+	@Column(length = 200)
+	private String tags;
+
+	@Column(length = 20)
+	private String status;
+
 	private String category;
 
 	@Column(name = "add_attach")
@@ -83,6 +92,30 @@ public class Article {
 
 	public void setTitle(String title) {
 		this.title = title;
+	}
+
+	public String getSummary() {
+		return summary;
+	}
+
+	public void setSummary(String summary) {
+		this.summary = summary;
+	}
+
+	public String getTags() {
+		return tags;
+	}
+
+	public void setTags(String tags) {
+		this.tags = tags;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
 	}
 
 	public String getContent() {

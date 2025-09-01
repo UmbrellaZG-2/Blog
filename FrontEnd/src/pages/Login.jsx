@@ -21,16 +21,20 @@ const Login = () => {
       // 调用管理员登录API
       const response = await adminLogin({ username, password });
       
-      if (response.success) {
+      if (response.token) {
         // 保存token到localStorage
-        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('token', response.token);
         toast.success('登录成功！');
-        navigate('/admin/articles');
+        // 使用navigate跳转到管理员文章管理页面
+        setTimeout(() => {
+          navigate('/admin/articles');
+        }, 500);
       } else {
-        toast.error(`登录失败：${response.message}`);
+        toast.error(`登录失败：${response.message || '未知错误'}`);
       }
     } catch (error) {
-      toast.error(`登录失败：${error.message}`);
+      console.error('登录错误:', error);
+      toast.error(`登录失败：${error.message || '网络错误'}`);
     } finally {
       setIsLoading(false);
     }
@@ -43,14 +47,20 @@ const Login = () => {
       // 调用游客登录API
       const response = await guestLogin();
       
-      if (response.success) {
+      if (response.token) {
+        // 保存token到localStorage
+        localStorage.setItem('token', response.token);
         toast.info('以游客身份访问');
-        navigate('/');
+        // 使用navigate跳转到首页
+        setTimeout(() => {
+          navigate('/');
+        }, 500);
       } else {
-        toast.error(`游客登录失败：${response.message}`);
+        toast.error(`游客登录失败：${response.message || '未知错误'}`);
       }
     } catch (error) {
-      toast.error(`游客登录失败：${error.message}`);
+      console.error('游客登录错误:', error);
+      toast.error(`游客登录失败：${error.message || '网络错误'}`);
     } finally {
       setIsLoading(false);
     }

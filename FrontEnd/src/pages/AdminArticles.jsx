@@ -1,34 +1,45 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { getAdminArticles, deleteArticle, addArticleTags, deleteArticleTag } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, Edit, Plus, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getArticles, deleteArticle, addArticleTags, deleteArticleTag } from '@/services/api';
 
 const AdminArticles = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+    } else {
+      setIsAuthorized(true);
+    }
+  }, [navigate]);
 
   // 获取文章列表
   const { data: articles, isLoading, error } = useQuery({
     queryKey: ['adminArticles'],
-    queryFn: getArticles,
+    queryFn: getAdminArticles,
+    enabled: isAuthorized,
   });
 
   // 过滤文章
-  const filteredArticles = (articles?.data || []).filter(article => 
+  const filteredArticles = (articles?.data?.articles || []).filter(article =>
     article?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     article?.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     article?.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleEdit = (id) => {
-    // 实际应用中会跳转到编辑页面
-    toast.info(`编辑文章 ID: ${id}`);
+    // 跳转到编辑页面
+    navigate(`/admin/articles/edit/${id}`);
   };
 
   const handleAddTag = async (articleId, tagName) => {
@@ -74,6 +85,10 @@ const AdminArticles = () => {
     }
   };
 
+  if (!isAuthorized) {
+    return <div className="container mx-auto px-4 py-8">加载中...</div>;
+  }
+
   if (isLoading) {
     return <div className="container mx-auto px-4 py-8">加载中...</div>;
   }
@@ -88,10 +103,13 @@ const AdminArticles = () => {
         <Button 
           variant="outline" 
           className="flex items-center"
-          onClick={() => navigate('/')}
+          onClick={() => {
+            localStorage.removeItem('token');
+            navigate('/');
+          }}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          返回首页
+          退出登录
         </Button>
         <h1 className="text-2xl font-bold">文章管理</h1>
         <Button onClick={() => navigate('/admin/articles/new')}>
@@ -150,9 +168,9 @@ const AdminArticles = () => {
                       <td className="py-3 px-4">{article.category}</td>
                       <td className="py-3 px-4">
                         <div className="flex flex-wrap gap-1">
-                          {article.tags.map((tag, index) => (
+                          {(article.tags || []).map((tag, index) => (
                             <span 
-                              key={index} 
+                              key={`${article.id}-${tag}-${index}`} 
                               className="relative group bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded cursor-pointer"
                             >
                               {tag}
