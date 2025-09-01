@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 public class ArticleDTO {
-    private UUID id;
+    private Long id;
     private String title;
     private String content;
     private String author;
@@ -24,7 +24,7 @@ public class ArticleDTO {
     
     public ArticleDTO() {}
     
-    public ArticleDTO(UUID id, String title, String content, String author, String authorNickname, 
+    public ArticleDTO(Long id, String title, String content, String author, String authorNickname, 
                      String status, Integer viewCount, Integer likeCount, Integer commentCount, 
                      List<String> tags, LocalDateTime createdAt, LocalDateTime updatedAt, 
                      String summary, String coverImage, Boolean isTop, Boolean isFeatured) {
@@ -47,8 +47,8 @@ public class ArticleDTO {
     }
     
     // Getters and Setters
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }

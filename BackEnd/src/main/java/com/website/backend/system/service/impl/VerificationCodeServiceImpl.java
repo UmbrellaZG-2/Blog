@@ -34,6 +34,10 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
         
         System.out.println("Generated verification code for email " + email + ": " + code);
         
+        // 同时将验证码写入日志文件以便调试
+        java.util.logging.Logger.getLogger(VerificationCodeServiceImpl.class.getName())
+            .info("验证码已生成 - 邮箱: " + email + ", 验证码: " + code);
+        
         return code;
     }
 

@@ -32,7 +32,6 @@ public class JwtTokenProvider {
 	private long jwtRefreshExpirationMs;
 
 	public String generateToken(Authentication authentication) {
-		UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
 		return generateTokenWithExpiration(authentication, jwtExpirationMs);
 	}
 	
@@ -52,7 +51,16 @@ public class JwtTokenProvider {
 	 * @return JWT令牌
 	 */
 	public String generateTokenWithExpiration(Authentication authentication, long expirationMs) {
-		UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
+		Object principal = authentication.getPrincipal();
+		String username;
+		
+		if (principal instanceof UserDetails) {
+			username = ((UserDetails) principal).getUsername();
+		} else if (principal instanceof String) {
+			username = (String) principal;
+		} else {
+			throw new ClassCastException("无法将类型 " + principal.getClass().getName() + " 转换为 UserDetails 或 String");
+		}
 		
 		// 获取用户权限
 		String authorities = authentication.getAuthorities().stream()
@@ -60,7 +68,7 @@ public class JwtTokenProvider {
 				.collect(Collectors.joining(","));
 
 		return Jwts.builder()
-			.subject(userPrincipal.getUsername())
+			.subject(username)
 			.claim("authorities", authorities)
 			.issuedAt(new Date())
 			.expiration(new Date(System.currentTimeMillis() + expirationMs))

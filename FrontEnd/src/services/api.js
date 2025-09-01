@@ -35,10 +35,40 @@ api.interceptors.request.use(
 // 响应拦截器
 api.interceptors.response.use(
   (response) => {
-    return response.data;
+    const responseData = response.data;
+    
+    // 检查业务逻辑成功状态
+    if (responseData && responseData.success === false) {
+      // 业务逻辑失败，抛出错误
+      const error = new Error(responseData.message || '操作失败');
+      error.code = responseData.code;
+      error.data = responseData.data;
+      return Promise.reject(error);
+    }
+    
+    return responseData;
   },
   (error) => {
     console.error('API Error:', error);
+    
+    // 处理401未授权错误
+    if (error.response?.status === 401) {
+      // 清除本地存储的token
+      localStorage.removeItem('token');
+      // 跳转到登录页面
+      window.location.href = '/#/login';
+    }
+    
+    // 处理业务异常，后端返回的格式为 { code: 400, message: "错误信息", data: null }
+    if (error.response?.data && error.response.data.message) {
+      // 抛出包含完整错误信息的错误对象，包含code、message和data字段
+      const errorData = error.response.data;
+      const errorWithCode = new Error(errorData.message);
+      errorWithCode.code = errorData.code;
+      errorWithCode.data = errorData.data;
+      return Promise.reject(errorWithCode);
+    }
+    
     return Promise.reject(error);
   }
 );
@@ -51,6 +81,10 @@ export const getArticles = async (params = {}) => {
   if (params.size !== undefined) queryParams.size = params.size;
   
   return api.get('/articles', { params: queryParams });
+};
+
+export const getAdminArticles = async () => {
+  return api.get('/articles/admin');
 };
 
 export const searchArticles = async (keyword, page = 0, size = 10) => {
@@ -71,6 +105,10 @@ export const searchArticlesByDTO = async (searchParams) => {
 };
 
 export const getArticleById = async (id) => {
+  return api.get(`/articles/get/${id}`);
+};
+
+export const getArticle = async (id) => {
   return api.get(`/articles/get/${id}`);
 };
 
@@ -195,7 +233,9 @@ export const guestLogin = async () => {
 
 // API端点 - 评论相关
 export const addComment = async (articleId, formData) => {
-  return api.post(`/articles/${articleId}/comments/put`, formData);
+  return api.post(`/articles/${articleId}/comments/put`, null, {
+    params: formData
+  });
 };
 
 export const updateComment = async (commentId, commentData) => {
@@ -208,6 +248,10 @@ export const deleteComment = async (commentId) => {
 
 export const getComments = async (articleId) => {
   return api.get(`/articles/${articleId}/comments/get`);
+};
+
+export const addReply = async (commentId, content) => {
+  return api.post(`/articles/comments/${commentId}/reply`, { content });
 };
 
 export const getAllComments = async () => {

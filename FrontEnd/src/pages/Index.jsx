@@ -99,7 +99,7 @@ const Index = () => {
           {displayArticlesLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-80 w-full" />
+                <Skeleton key={`skeleton-search-${i}`} className="h-80 w-full" />
               ))}
             </div>
           ) : displayArticlesError ? (
@@ -139,7 +139,7 @@ const Index = () => {
           {displayArticlesLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
-                <Skeleton key={i} className="h-80 w-full" />
+                <Skeleton key={`skeleton-articles-${i}`} className="h-80 w-full" />
               ))}
             </div>
           ) : displayArticlesError ? (

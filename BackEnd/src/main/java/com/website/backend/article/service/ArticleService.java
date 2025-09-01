@@ -15,8 +15,8 @@ public interface ArticleService {
 
 	Article getArticleById(UUID articleId);
 
-	Article createArticle(String title, String category, String content, MultipartFile attachment,
-			MultipartFile picture);
+	Article createArticle(String title, String category, String content, String summary,
+			String tags, String status, MultipartFile coverImage, MultipartFile[] attachments);
 
 	Article updateArticle(UUID articleId, String title, String category, String content, boolean deleteAttachment,
 			boolean deletePicture, MultipartFile attachment, MultipartFile picture);

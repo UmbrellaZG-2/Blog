@@ -7,13 +7,13 @@ const CategoryNav = ({ categories = [], activeCategory, onCategoryChange }) => {
 
   return (
     <div className="flex flex-wrap gap-2 mb-8 justify-center">
-      {safeCategories.map((category) => (
+      {safeCategories.map((category, index) => (
         <Button
-          key={category.id}
-          variant={activeCategory === category.id ? 'default' : 'outline'}
-          onClick={() => onCategoryChange(category.id)}
+          key={typeof category === 'object' ? category.id : index}
+          variant={activeCategory === (typeof category === 'object' ? category.id : category) ? 'default' : 'outline'}
+          onClick={() => onCategoryChange(typeof category === 'object' ? category.id : category)}
         >
-          {category.name}
+          {typeof category === 'object' ? category.name : category}
         </Button>
       ))}
     </div>

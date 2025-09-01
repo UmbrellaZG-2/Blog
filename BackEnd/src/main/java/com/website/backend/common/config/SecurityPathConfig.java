@@ -18,6 +18,7 @@ public class SecurityPathConfig {
             "/articles/**",
             "/auth/get",
             "/auth/login",
+            "/auth/register",
             "/auth/admin/login",
             "/auth/admin/register",
             "/auth/guest/login",

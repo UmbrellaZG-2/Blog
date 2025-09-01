@@ -2,6 +2,7 @@ package com.website.backend.system.entity;
 
 import lombok.Data;
 import jakarta.persistence.*;
+import org.hibernate.annotations.GenericGenerator;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -13,8 +14,10 @@ public class GuestUser implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @Id
+    @GeneratedValue(generator = "uuid2")
+    @GenericGenerator(name = "uuid2", strategy = "uuid2")
+    @Column(columnDefinition = "VARCHAR(36)")
     private String id;
-    // 注意：UUID生成需要在代码中手动处理，MyBatis不会自动生成
 
     private String username;
     

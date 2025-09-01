@@ -70,6 +70,18 @@ public class ArticleController {
 		return ApiResponse.success(articleListDTO);
 	}
 
+	@GetMapping("/admin")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ApiResponse<ArticleListDTO> getAdminArticles(@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
+
+		Pageable pageable = PageRequest.of(page, size);
+		Page<Article> articlePage = articleRepo.findAll(pageable);
+
+		ArticleListDTO articleListDTO = buildArticleListDTO(articlePage);
+		return ApiResponse.success(articleListDTO);
+	}
+
 	private ArticleListDTO buildArticleListDTO(Page<Article> articlePage) {
 		ArticleListDTO articleListDTO = new ArticleListDTO();
 		articleListDTO.setArticles(articlePage.getContent().stream().map(dtoConverter::convertToDTO)
@@ -261,10 +273,12 @@ public class ArticleController {
 	@PostMapping("/create")
 	@PreAuthorize("hasRole('ADMIN')")
 	public ApiResponse<ArticleDTO> createArticle(@RequestParam String title, @RequestParam String category,
-			@RequestParam String content, @RequestParam(required = false) MultipartFile attachment,
-			@RequestParam(required = false) MultipartFile picture) {
+			@RequestParam String content, @RequestParam(required = false) String summary,
+			@RequestParam(required = false) String tags, @RequestParam(required = false) String status,
+			@RequestParam(required = false) MultipartFile coverImage,
+			@RequestParam(required = false) MultipartFile[] attachments) {
 
-		Article article = articleService.createArticle(title, category, content, attachment, picture);
+		Article article = articleService.createArticle(title, category, content, summary, tags, status, coverImage, attachments);
 		ArticleDTO dto = dtoConverter.convertToDTO(article);
 		return ApiResponse.success(dto);
 	}

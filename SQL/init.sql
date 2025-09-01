@@ -7,13 +7,13 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     create_time TIMESTAMP NOT NULL,
     update_time TIMESTAMP NOT NULL
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 角色表
 CREATE TABLE IF NOT EXISTS roles (
                                      id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                      name VARCHAR(50) NOT NULL UNIQUE
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 用户角色关联表
 CREATE TABLE IF NOT EXISTS user_roles (
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
                                           PRIMARY KEY (user_id, role_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 文章表
 CREATE TABLE IF NOT EXISTS articles (
@@ -41,14 +41,14 @@ CREATE TABLE IF NOT EXISTS articles (
     like_count BIGINT DEFAULT 0,
     attachment_path VARCHAR(255),
     picture_path VARCHAR(255)
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 标签表
 CREATE TABLE IF NOT EXISTS tags (
                                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                     name VARCHAR(50) NOT NULL UNIQUE,
     create_time TIMESTAMP NOT NULL
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 文章标签关联表
 CREATE TABLE IF NOT EXISTS article_tags (
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS article_tags (
                                             tag_id BIGINT NOT NULL,
                                             FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
     FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 文章点赞表
 CREATE TABLE IF NOT EXISTS article_likes (
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS article_likes (
     create_time TIMESTAMP NOT NULL,
     FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 评论表
 CREATE TABLE IF NOT EXISTS comments (
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS comments (
     update_time TIMESTAMP,
     ip_address VARCHAR(50),
     FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 附件表
 CREATE TABLE IF NOT EXISTS attachments (
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS attachments (
     upload_time TIMESTAMP,
     article_id BIGINT NOT NULL,
     FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 文章图片表
 CREATE TABLE IF NOT EXISTS article_pictures (
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS article_pictures (
     article_id BIGINT NOT NULL,
     is_cover BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 访客用户表
 CREATE TABLE IF NOT EXISTS guest_users (
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS guest_users (
     expire_time TIMESTAMP,
     create_time TIMESTAMP,
     update_time TIMESTAMP
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- IP限流表
 CREATE TABLE IF NOT EXISTS ip_rate_limits (
@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS ip_rate_limits (
     block_end_time TIMESTAMP,
     create_time TIMESTAMP,
     update_time TIMESTAMP
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 系统配置表
 CREATE TABLE IF NOT EXISTS tb_cfg_system (
@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS tb_cfg_system (
     config_desc TEXT,
     create_time TIMESTAMP,
     update_time TIMESTAMP
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 验证码表
 CREATE TABLE IF NOT EXISTS verification_codes (
@@ -153,7 +153,7 @@ CREATE TABLE IF NOT EXISTS verification_codes (
     create_time TIMESTAMP NOT NULL,
     update_time TIMESTAMP NOT NULL,
     UNIQUE KEY unique_email_code (email, code)
-    );
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 插入基础角色数据
 INSERT INTO roles (name) VALUES ('ROLE_USER'), ('ROLE_ADMIN'), ('ROLE_GUEST')

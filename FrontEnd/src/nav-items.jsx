@@ -1,4 +1,4 @@
-import { HomeIcon, FileText, LogIn, User, FileEdit, Plus, MessageCircle } from "lucide-react";
+import { HomeIcon, FileText, LogIn, User, FileEdit, Plus, MessageCircle, Edit } from "lucide-react";
 import Index from "./pages/Index.jsx";
 import Article from "./pages/Article.jsx";
 import Login from "./pages/Login.jsx";
@@ -6,6 +6,7 @@ import About from "./pages/About.jsx";
 import AdminArticles from "./pages/AdminArticles.jsx";
 import NewArticle from "./pages/NewArticle.jsx";
 import AdminComments from "./pages/AdminComments.jsx";
+import EditArticle from "./pages/EditArticle.jsx";
 
 /**
 * Central place for defining the navigation items. Used for navigation components and routing.
@@ -52,5 +53,11 @@ export const navItems = [
     to: "/admin/comments",
     icon: <MessageCircle className="h-4 w-4" />,
     page: <AdminComments />,
+  },
+  {
+    title: "编辑文章",
+    to: "/admin/articles/edit/:id",
+    icon: <Edit className="h-4 w-4" />,
+    page: <EditArticle />,
   },
 ];

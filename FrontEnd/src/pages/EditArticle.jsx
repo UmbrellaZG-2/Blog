@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createArticle } from '@/services/api';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getArticleById, updateArticle } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Save, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 
-const NewArticle = () => {
+const EditArticle = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
   const queryClient = useQueryClient();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [formData, setFormData] = useState({
@@ -37,6 +38,32 @@ const NewArticle = () => {
     }
   }, [navigate]);
 
+  // 获取文章详情
+  const { data: article, isLoading, error } = useQuery({
+    queryKey: ['article', id],
+    queryFn: () => getArticleById(id),
+    enabled: isAuthorized && !!id,
+  });
+
+  // 填充表单数据
+  useEffect(() => {
+    if (article?.data) {
+      const articleData = article.data;
+      setFormData({
+        title: articleData.title || '',
+        summary: articleData.summary || '',
+        content: articleData.content || '',
+        category: articleData.category || '',
+        tags: Array.isArray(articleData.tags) ? articleData.tags.join(',') : '',
+        status: articleData.status || 'draft'
+      });
+      
+      if (articleData.coverImage && articleData.coverImage !== 'false') {
+        setCoverImagePreview(articleData.coverImage);
+      }
+    }
+  }, [article]);
+
   // 固定分类选项
   const categories = [
     { id: 'technology', name: '技术' },
@@ -46,6 +73,14 @@ const NewArticle = () => {
 
   if (!isAuthorized) {
     return <div className="container mx-auto px-4 py-8">加载中...</div>;
+  }
+
+  if (isLoading) {
+    return <div className="container mx-auto px-4 py-8">加载中...</div>;
+  }
+
+  if (error) {
+    return <div className="container mx-auto px-4 py-8 text-red-500">加载失败: {error.message}</div>;
   }
 
   const handleInputChange = (field, value) => {
@@ -70,7 +105,7 @@ const NewArticle = () => {
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     const newAttachments = files.map(file => ({
-      id: Date.now() + Math.random(),
+      id: Math.random().toString(36).substr(2, 9),
       name: file.name,
       size: (file.size / 1024 / 1024).toFixed(2) + 'MB',
       file: file
@@ -78,8 +113,8 @@ const NewArticle = () => {
     setAttachments(prev => [...prev, ...newAttachments]);
   };
 
-  const removeAttachment = (id) => {
-    setAttachments(prev => prev.filter(attachment => attachment.id !== id));
+  const removeAttachment = (attachmentId) => {
+    setAttachments(prev => prev.filter(att => att.id !== attachmentId));
   };
 
   const handleSubmit = async (e) => {
@@ -87,45 +122,37 @@ const NewArticle = () => {
     setIsSubmitting(true);
 
     try {
-      const submitData = new FormData();
-      
-      // 添加基本表单数据
-      Object.keys(formData).forEach(key => {
-        submitData.append(key, formData[key]);
-      });
+      const formDataToSend = new FormData();
+      formDataToSend.append('title', formData.title);
+      formDataToSend.append('summary', formData.summary);
+      formDataToSend.append('content', formData.content);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('tags', formData.tags);
+      formDataToSend.append('status', formData.status);
 
-      // 处理标签格式
-      if (formData.tags) {
-        submitData.append('tags', formData.tags.split(',').map(tag => tag.trim()).join(','));
-      }
-
-      // 添加封面图片
       if (coverImage) {
-        submitData.append('coverImage', coverImage);
+        formDataToSend.append('coverImage', coverImage);
       }
 
-      // 添加附件
-      attachments.forEach(attachment => {
-        submitData.append('attachments', attachment.file);
+      attachments.forEach((attachment, index) => {
+        formDataToSend.append(`attachments`, attachment.file);
       });
 
-      const response = await createArticle(submitData);
+      const response = await updateArticle(id, formDataToSend);
       
       if (response.success) {
-        toast.success('文章创建成功');
         queryClient.invalidateQueries(['adminArticles']);
-        window.location.href = 'http://localhost:8082/#/admin/articles';
+        toast.success('文章更新成功');
+        navigate('/admin/articles');
       } else {
-        toast.error(`创建失败：${response.message}`);
+        toast.error(`更新失败：${response.message}`);
       }
     } catch (error) {
-      toast.error(`创建失败：${error.message}`);
+      toast.error(`更新失败：${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
-
-
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -138,7 +165,7 @@ const NewArticle = () => {
           <ArrowLeft className="w-4 h-4 mr-2" />
           返回文章管理
         </Button>
-        <h1 className="text-2xl font-bold">新建文章</h1>
+        <h1 className="text-2xl font-bold">编辑文章</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -189,41 +216,34 @@ const NewArticle = () => {
                 <label className="block text-sm font-medium mb-2">标签（可选）</label>
                 <Input
                   type="text"
-                  placeholder="请输入标签，用逗号分隔"
+                  placeholder="多个标签用逗号分隔"
                   value={formData.tags}
                   onChange={(e) => handleInputChange('tags', e.target.value)}
                 />
-                <p className="text-sm text-gray-500 mt-1">多个标签请用逗号分隔，例如：React,JavaScript</p>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">封面图片（可选）</label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-4">
+                {coverImagePreview && (
+                  <img 
+                    src={coverImagePreview} 
+                    alt="封面预览" 
+                    className="w-32 h-20 object-cover rounded-lg"
+                  />
+                )}
                 <Input
                   type="file"
                   accept="image/*"
                   onChange={handleCoverImageChange}
                   className="flex-1"
                 />
-                <Button type="button" variant="outline">
-                  <Upload className="w-4 h-4 mr-2" />
-                  选择图片
-                </Button>
               </div>
-              {coverImagePreview && (
-                <div className="mt-2">
-                  <img 
-                    src={coverImagePreview} 
-                    alt="封面预览" 
-                    className="mx-auto object-cover w-full h-48 rounded-lg"
-                  />
-                </div>
-              )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">发布状态</label>
+              <label className="block text-sm font-medium mb-2">状态</label>
               <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -270,7 +290,7 @@ const NewArticle = () => {
                   <div className="space-y-2">
                     {attachments.map((attachment) => (
                       <div 
-                        key={attachment.id || attachment.name} 
+                        key={attachment.id} 
                         className="flex items-center justify-between p-3 border rounded-lg"
                       >
                         <div>
@@ -326,7 +346,7 @@ const NewArticle = () => {
             {isSubmitting ? '保存中...' : (
               <>
                 <Save className="w-4 h-4 mr-2" />
-                保存文章
+                保存修改
               </>
             )}
           </Button>
@@ -336,4 +356,4 @@ const NewArticle = () => {
   );
 };
 
-export default NewArticle;
+export default EditArticle;
