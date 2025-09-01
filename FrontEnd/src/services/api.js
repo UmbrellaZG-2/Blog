@@ -15,6 +15,10 @@ const envConfig = config[currentEnv] || config.development;
 const api = axios.create({
   baseURL: envConfig.API_BASE_URL,
   timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: false, // 确保不发送cookies
 });
 
 // 请求拦截器
@@ -32,41 +36,29 @@ api.interceptors.request.use(
   }
 );
 
-// 响应拦截器
+// 添加响应拦截器
 api.interceptors.response.use(
   (response) => {
-    const responseData = response.data;
+    // 原始响应数据处理
+    const { data } = response;
     
-    // 检查业务逻辑成功状态
-    if (responseData && responseData.success === false) {
-      // 业务逻辑失败，抛出错误
-      const error = new Error(responseData.message || '操作失败');
-      error.code = responseData.code;
-      error.data = responseData.data;
+    // 如果后端返回了错误业务状态
+    if (data && data.success === false) {
+      const error = new Error(data.message || '操作失败');
+      error.code = data.code;
+      error.data = data.data;
       return Promise.reject(error);
     }
     
-    return responseData;
+    return data;
   },
   (error) => {
     console.error('API Error:', error);
     
-    // 处理401未授权错误
+    // 自动处理401未授权
     if (error.response?.status === 401) {
-      // 清除本地存储的token
       localStorage.removeItem('token');
-      // 跳转到登录页面
       window.location.href = '/#/login';
-    }
-    
-    // 处理业务异常，后端返回的格式为 { code: 400, message: "错误信息", data: null }
-    if (error.response?.data && error.response.data.message) {
-      // 抛出包含完整错误信息的错误对象，包含code、message和data字段
-      const errorData = error.response.data;
-      const errorWithCode = new Error(errorData.message);
-      errorWithCode.code = errorData.code;
-      errorWithCode.data = errorData.data;
-      return Promise.reject(errorWithCode);
     }
     
     return Promise.reject(error);
@@ -113,7 +105,11 @@ export const getArticle = async (id) => {
 };
 
 export const createArticle = async (articleData) => {
-  return api.post('/articles/create', articleData);
+  return api.post('/articles/create', articleData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
 };
 
 export const updateArticle = async (id, articleData) => {
@@ -140,10 +136,9 @@ export const getAttachments = async (articleId) => {
 
 export const downloadAttachment = async (attachmentId) => {
   // 返回文件blob
-  const response = await api.get(`/attachments/download/${attachmentId}`, {
+  return api.get(`/attachments/download/${attachmentId}`, {
     responseType: 'blob'
   });
-  return response.data;
 };
 
 export const uploadAttachment = async (formData) => {

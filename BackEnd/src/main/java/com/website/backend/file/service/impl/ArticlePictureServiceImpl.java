@@ -9,6 +9,7 @@ import com.website.backend.file.entity.ArticlePicture;
 import com.website.backend.file.repository.ArticlePictureRepository;
 import com.website.backend.file.service.ArticlePictureService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +33,7 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 	}
 
 	@Override
+	@Transactional
 	public ArticlePicture uploadPicture(MultipartFile file, Article article) throws IOException {
 		String fileName = file.getOriginalFilename();
 		if (fileName == null) {
@@ -76,6 +78,7 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 	}
 
 	@Override
+	@Transactional
 	public byte[] downloadPicture(Long pictureId) throws IOException {
 		log.debug("开始下载文章图片，图片ID: {}", pictureId);
 		Optional<ArticlePicture> pictureOptional = articlePictureRepository.findById(pictureId);
@@ -93,6 +96,7 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 	}
 
 	@Override
+	@Transactional
 	public void deletePicture(Long pictureId) {
 		log.debug("开始删除文章图片，图片ID: {}", pictureId);
 		Optional<ArticlePicture> pictureOptional = articlePictureRepository.findById(pictureId);
@@ -109,6 +113,7 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 	}
 
 	@Override
+	@Transactional
 	public void deletePictureByArticle(Article article) {
 		log.info("开始删除文章相关的图片，文章ID: {}", article.getId());
 		Optional<ArticlePicture> pictureOptional = articlePictureRepository.findByArticle(article);
@@ -126,6 +131,7 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public ArticlePicture getPictureByArticle(Article article) {
 		log.debug("根据文章获取图片，文章ID: {}", article.getId());
 		Optional<ArticlePicture> pictureOptional = articlePictureRepository.findByArticle(article);

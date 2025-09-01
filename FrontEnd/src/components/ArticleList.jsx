@@ -3,6 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import config from '@/config';
+
+const { API_BASE_URL } = config.development;
 
 const ArticleList = ({ articles = [] }) => {
   const navigate = useNavigate();
@@ -14,6 +17,32 @@ const ArticleList = ({ articles = [] }) => {
     navigate(`/article/${id}`);
   };
 
+  // 构建封面图片URL
+  const getCoverImageUrl = (coverImage, id) => {
+    if (!coverImage || coverImage === 'false') {
+      return null;
+    }
+    if (typeof coverImage === 'boolean' && coverImage === true) {
+      return `${API_BASE_URL}/images/article/${id}/cover/download`;
+    }
+    if (coverImage === 'true') {
+      return `${API_BASE_URL}/images/article/${id}/cover/download`;
+    }
+    if (coverImage.startsWith('http')) {
+      return coverImage;
+    }
+    // 处理相对路径
+    if (coverImage.startsWith('/')) {
+      return `${API_BASE_URL}${coverImage}`;
+    }
+    if (coverImage.startsWith('D:\\')) {
+      // 转换本地路径为URL
+      const filename = coverImage.split('\\').pop();
+      return `${API_BASE_URL}/images/article/${id}/cover/download`;
+    }
+    return coverImage;
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {safeArticles.map((article) => (
@@ -22,9 +51,9 @@ const ArticleList = ({ articles = [] }) => {
           className="hover:shadow-lg transition-shadow cursor-pointer"
           onClick={() => handleArticleClick(article.id)}
         >
-          {(article.coverImage && article.coverImage !== 'false') ? (
+          {getCoverImageUrl(article.coverImage, article.id) ? (
             <img 
-              src={article.coverImage} 
+              src={getCoverImageUrl(article.coverImage, article.id)} 
               alt={article.title} 
               className="w-full h-48 object-cover rounded-t-lg"
             />

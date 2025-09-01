@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import com.website.backend.file.entity.Attachment;
+
 public class ArticleDTO {
     private Long id;
     private String title;
@@ -21,6 +23,7 @@ public class ArticleDTO {
     private String coverImage;
     private Boolean isTop;
     private Boolean isFeatured;
+    private List<Attachment> attachments; // 添加附件列表字段
     
     public ArticleDTO() {}
     
@@ -94,4 +97,7 @@ public class ArticleDTO {
     
     public Boolean getIsFeatured() { return isFeatured; }
     public void setIsFeatured(Boolean isFeatured) { this.isFeatured = isFeatured; }
+    
+    public List<Attachment> getAttachments() { return attachments; }
+    public void setAttachments(List<Attachment> attachments) { this.attachments = attachments; }
 }

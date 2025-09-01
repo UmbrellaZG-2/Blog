@@ -61,6 +61,7 @@ public class ArticleServiceImpl implements ArticleService {
 	}
 	
 	@Override
+	@Transactional
 	public Article createArticle(String title, String category, String content, String summary,
 			String tags, String status, MultipartFile coverImage, MultipartFile[] attachments) {
 		// 参数验证
@@ -87,12 +88,15 @@ public class ArticleServiceImpl implements ArticleService {
 		article.setLikeCount(0L);
 
 		try {
+			// 先保存文章，获取文章ID后再上传文件
 			Article savedArticle = articleRepository.save(article);
-
+			
+			String coverImagePath = null;
+			boolean hasAttachment = false;
+			
 			// 处理封面图片上传
 			if (coverImage != null && !coverImage.isEmpty()) {
-				articlePictureService.uploadPicture(coverImage, savedArticle);
-				savedArticle.setHasCoverImage(true);
+				coverImagePath = articlePictureService.uploadPicture(coverImage, savedArticle).getFilePath();
 			}
 
 			// 处理附件上传
@@ -100,14 +104,24 @@ public class ArticleServiceImpl implements ArticleService {
 				for (MultipartFile attachment : attachments) {
 					if (attachment != null && !attachment.isEmpty()) {
 						attachmentService.uploadAttachment(attachment, savedArticle);
-						savedArticle.setHasAttachment(true);
+						hasAttachment = true;
 					}
 				}
 			}
 
-			return articleRepository.save(savedArticle);
+			// 更新文章的文件状态
+			savedArticle.setHasCoverImage(coverImagePath != null);
+			savedArticle.setHasAttachment(hasAttachment);
+			savedArticle = articleRepository.save(savedArticle);
+			
+			log.info("文章创建成功，文章ID: {}", savedArticle.getId());
+			return savedArticle;
 		} catch (IOException e) {
+			log.error("文件上传失败: {}", e.getMessage(), e);
 			throw new FileProcessingException("文件上传失败: " + e.getMessage(), e);
+		} catch (Exception e) {
+			log.error("创建文章失败: {}", e.getMessage(), e);
+			throw new FileProcessingException("创建文章失败: " + e.getMessage(), e);
 		}
 	}
 
