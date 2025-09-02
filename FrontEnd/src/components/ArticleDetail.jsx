@@ -12,7 +12,10 @@ import { MessageCircle, Calendar, User, Tag, Paperclip, Download, ArrowLeft, Thu
 import { getArticle, likeArticle, getComments, addComment, addReply, downloadAttachment } from '@/services/api';
 import config from '@/config';
 
-const { API_BASE_URL } = config.development;
+// 根据环境选择正确的API基础URL
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? config.production.API_BASE_URL 
+  : config.development.API_BASE_URL;
 
 const ArticleDetail = () => {
   const { id } = useParams();
@@ -81,9 +84,9 @@ const ArticleDetail = () => {
   const getAttachmentUrl = (attachment) => {
     if (attachment.filePath && attachment.filePath.startsWith('D:\\')) {
       // 转换本地路径为下载URL
-      return `http://localhost:8081/api/attachments/download/${attachment.attachmentId || attachment.id}`;
+      return `${API_BASE_URL}/attachments/download/${attachment.attachmentId || attachment.id}`;
     }
-    return attachment.filePath || `http://localhost:8081/api/attachments/download/${attachment.attachmentId || attachment.id}`;
+    return attachment.filePath || `${API_BASE_URL}/attachments/download/${attachment.attachmentId || attachment.id}`;
   };
 
   // 点赞文章
@@ -223,7 +226,7 @@ const ArticleDetail = () => {
       // 提供一个默认的文件名以防万一
       const fallbackFilename = attachment.fileName || attachment.name || 'attachment';
       const link = document.createElement('a');
-      link.href = `http://localhost:8081/api/attachments/download/${attachment.attachmentId || attachment.id}`;
+      link.href = `${API_BASE_URL}/attachments/download/${attachment.attachmentId || attachment.id}`;
       link.download = fallbackFilename;
       document.body.appendChild(link);
       link.click();
@@ -397,37 +400,40 @@ const ArticleDetail = () => {
             </Card>
           </div>
         )}
-      </article>
-      
-      {/* 评论区域 */}
-      <Card className="mt-8">
-        <CardContent className="pt-6">
+        
+        <Separator className="my-8" />
+        
+        <div className="mb-8">
           <h3 className="text-xl font-semibold mb-4">评论</h3>
-          
-          {/* 发表评论 */}
           <div className="mb-6">
-            <textarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="发表你的评论..."
-              className="w-full border rounded-lg p-3 mb-2"
-              rows="3"
-            />
-            <div className="flex justify-end">
-              <Button onClick={handleAddComment}>发表评论</Button>
+            <div className="flex items-start space-x-3">
+              <Avatar>
+                <AvatarFallback>
+                  <User className="w-4 h-4" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="输入评论..."
+                  className="w-full border rounded-lg p-3 min-h-[100px]"
+                />
+                <div className="mt-2 flex justify-end">
+                  <Button onClick={handleAddComment}>
+                    <Send className="w-4 h-4 mr-2" />
+                    发表评论
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
           
-          {/* 评论列表 */}
           <div>
-            {comments.length > 0 ? (
-              renderComments()
-            ) : (
-              <p className="text-gray-500 text-center py-4">暂无评论，快来发表第一条评论吧！</p>
-            )}
+            {renderComments()}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </article>
     </div>
   );
 };

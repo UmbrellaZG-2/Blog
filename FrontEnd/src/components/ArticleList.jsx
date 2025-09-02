@@ -5,7 +5,10 @@ import { Calendar, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import config from '@/config';
 
-const { API_BASE_URL } = config.development;
+// 根据环境选择正确的API基础URL
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? config.production.API_BASE_URL 
+  : config.development.API_BASE_URL;
 
 const ArticleList = ({ articles = [] }) => {
   const navigate = useNavigate();
@@ -77,11 +80,12 @@ const ArticleList = ({ articles = [] }) => {
                 </span>
               ))}
             </div>
-            <div className="flex justify-between text-sm text-gray-500">
-              <div className="flex items-center">
-                <Calendar className="w-4 h-4 mr-1" />
-                {article.createTime ? new Date(article.createTime).toLocaleDateString() : '未知时间'}
-              </div>
+            <div className="flex items-center text-sm text-gray-500">
+              <Calendar className="w-4 h-4 mr-1" />
+              {article.createTime ? (() => {
+                const date = new Date(article.createTime);
+                return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+              })() : '未知时间'}
             </div>
           </CardContent>
         </Card>

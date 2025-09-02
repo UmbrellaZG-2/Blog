@@ -50,8 +50,7 @@ public class SecurityConfig {
 			"http://101.200.43.186:8081", 
 			"http://101.200.43.186:8082", 
 			"http://101.200.43.186:8083",
-			"http://localhost:8081",
-			"http://localhost:8082", 
+			"http://localhost:8081", 
 			"http://localhost:8083",
 			"http://localhost:8082"));
 		configuration.addAllowedMethod("*");

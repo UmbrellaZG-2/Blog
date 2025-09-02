@@ -104,6 +104,19 @@ const EditArticle = () => {
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
+    
+    // 验证文件格式，只允许zip、7z、rar格式
+    const allowedExtensions = ['.zip', '.7z', '.rar'];
+    const invalidFiles = files.filter(file => {
+      const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+      return !allowedExtensions.includes(fileExtension);
+    });
+
+    if (invalidFiles.length > 0) {
+      toast.error(`不支持的文件格式：${invalidFiles.map(f => f.name).join(', ')}。请选择zip、7z或rar格式的文件。`);
+      return;
+    }
+
     const newAttachments = files.map(file => ({
       id: Math.random().toString(36).substr(2, 9),
       name: file.name,
@@ -273,6 +286,7 @@ const EditArticle = () => {
                     multiple
                     onChange={handleFileChange}
                     className="flex-1"
+                    accept=".zip,.7z,.rar"
                   />
                   <Button type="button" variant="outline">
                     <Upload className="w-4 h-4 mr-2" />

@@ -96,14 +96,57 @@ public class AttachmentServiceImpl implements AttachmentService {
 	@Override
 	@Transactional
 	public byte[] downloadAttachment(Long attachmentId) throws IOException {
-		log.debug("开始下载附件，附件ID: {}", attachmentId);
-		Attachment attachment = attachmentRepository.findById(attachmentId).orElseThrow(() -> {
+		log.info("开始下载附件，附件ID: {}", attachmentId);
+		
+		// 检查附件ID是否有效
+		if (attachmentId == null) {
+			log.error("附件ID不能为空");
+			throw new IOException("附件ID不能为空");
+		}
+		
+		// 查找附件记录
+		Optional<Attachment> attachmentOpt = attachmentRepository.findById(attachmentId);
+		if (!attachmentOpt.isPresent()) {
 			log.error("附件不存在，附件ID: {}", attachmentId);
-			return new RuntimeException("Attachment not found");
-		});
+			throw new IOException("附件不存在，附件ID: " + attachmentId);
+		}
 
+		Attachment attachment = attachmentOpt.get();
 		String filePath = attachment.getFilePath();
-		return fileOperationHelper.readFileContent(filePath);
+		
+		log.info("找到附件记录，文件路径: {}", filePath);
+		
+		// 检查文件路径是否为空
+		if (filePath == null || filePath.isEmpty()) {
+			log.error("附件文件路径为空，附件ID: {}", attachmentId);
+			throw new IOException("附件文件路径为空");
+		}
+		
+		// 检查文件是否存在
+		File file = new File(filePath);
+		if (!file.exists()) {
+			log.error("附件文件不存在，文件路径: {}", filePath);
+			throw new IOException("附件文件不存在: " + filePath);
+		}
+		
+		if (!file.isFile()) {
+			log.error("路径不是一个文件，文件路径: {}", filePath);
+			throw new IOException("路径不是一个文件: " + filePath);
+		}
+		
+		if (!file.canRead()) {
+			log.error("文件不可读，文件路径: {}", filePath);
+			throw new IOException("文件不可读: " + filePath);
+		}
+		
+		try {
+			byte[] content = fileOperationHelper.readFileContent(filePath);
+			log.info("成功读取附件文件内容，大小: {} 字节", content.length);
+			return content;
+		} catch (IOException e) {
+			log.error("读取附件文件内容失败，文件路径: {}", filePath, e);
+			throw e;
+		}
 	}
 
 	@Override

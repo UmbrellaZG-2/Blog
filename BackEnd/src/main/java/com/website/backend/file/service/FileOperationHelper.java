@@ -31,7 +31,11 @@ public class FileOperationHelper {
                     log.warn("从文件系统删除文件失败: {}", filePath);
                 }
                 return deleted;
+            } else {
+                log.warn("文件不存在，无法删除: {}", filePath);
             }
+        } else {
+            log.warn("文件路径为空，无法删除");
         }
         return false;
     }
@@ -44,15 +48,37 @@ public class FileOperationHelper {
      * @throws IOException 文件读取异常
      */
     public byte[] readFileContent(String filePath) throws IOException {
+        log.debug("开始读取文件内容，文件路径: {}", filePath);
+        
         if (filePath == null || filePath.isEmpty()) {
+            log.error("文件路径不能为空");
             throw new IOException("文件路径不能为空");
         }
 
         File file = new File(filePath);
         if (!file.exists()) {
+            log.error("文件不存在: {}", filePath);
             throw new IOException("文件不存在: " + filePath);
         }
+        
+        if (!file.isFile()) {
+            log.error("路径不是一个文件: {}", filePath);
+            throw new IOException("路径不是一个文件: " + filePath);
+        }
+        
+        if (!file.canRead()) {
+            log.error("文件不可读: {}", filePath);
+            throw new IOException("文件不可读: " + filePath);
+        }
 
-        return Files.readAllBytes(file.toPath());
+        try {
+            byte[] content = Files.readAllBytes(file.toPath());
+            log.debug("成功读取文件内容，文件大小: {} 字节", content.length);
+            return content;
+        } catch (IOException e) {
+            log.error("读取文件内容失败，文件路径: {}", filePath, e);
+            throw new IOException("读取文件内容失败: " + e.getMessage(), e);
+        }
     }
 }
+

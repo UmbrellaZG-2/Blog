@@ -18,6 +18,8 @@ import com.website.backend.file.repository.ArticlePictureRepository;
 import com.website.backend.article.repository.ArticleRepository;
 import com.website.backend.file.service.ArticlePictureService;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
@@ -105,27 +107,40 @@ public class ImageController {
     @GetMapping("/article/{articleId}/cover/download")
     public ResponseEntity<byte[]> downloadArticleCover(@PathVariable Long articleId) {
         try {
+            logger.info("开始下载文章封面图片，文章ID: {}", articleId);
+            
             Optional<Article> articleOpt = articleRepository.findById(articleId);
             if (articleOpt.isEmpty()) {
+                logger.warn("文章不存在，文章ID: {}", articleId);
                 return ResponseEntity.notFound().build();
             }
             
             Article article = articleOpt.get();
-            Optional<ArticlePicture> picture = articlePictureRepository.findByArticle(article);
+            Optional<ArticlePicture> pictureOpt = articlePictureRepository.findByArticle(article);
             
-            // 简化判断逻辑，只要文章有关联的图片就返回
-            if (picture.isPresent()) {
-                byte[] imageContent = articlePictureService.downloadPicture(picture.get().getPictureId());
+            if (pictureOpt.isPresent()) {
+                ArticlePicture picture = pictureOpt.get();
+                logger.info("找到文章图片记录，图片ID: {}, 文件名: {}", picture.getPictureId(), picture.getFileName());
+                
+                byte[] imageContent = articlePictureService.downloadPicture(picture.getPictureId());
+                
+                // 对文件名进行URL编码以支持中文等特殊字符
+                String encodedFileName = URLEncoder.encode(picture.getFileName(), StandardCharsets.UTF_8);
+                
+                logger.info("图片内容读取成功，内容大小: {} 字节", imageContent.length);
                 
                 return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_TYPE, picture.get().getFileType())
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + picture.get().getFileName() + "\"")
+                    .header(HttpHeaders.CONTENT_TYPE, picture.getFileType())
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + encodedFileName + "\"")
+                    // 添加CORS相关头部
+                    .header(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, HttpHeaders.CONTENT_DISPOSITION)
                     .body(imageContent);
             } else {
+                logger.warn("文章封面图片不存在，文章ID: {}", articleId);
                 return ResponseEntity.notFound().build();
             }
         } catch (Exception e) {
-            logger.error("下载文章封面图片失败: {}", e.getMessage());
+            logger.error("下载文章封面图片失败，文章ID: {}", articleId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

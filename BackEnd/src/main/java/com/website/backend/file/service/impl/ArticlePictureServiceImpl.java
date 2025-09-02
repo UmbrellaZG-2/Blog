@@ -80,15 +80,43 @@ public class ArticlePictureServiceImpl implements ArticlePictureService {
 	@Override
 	@Transactional
 	public byte[] downloadPicture(Long pictureId) throws IOException {
-		log.debug("开始下载文章图片，图片ID: {}", pictureId);
+		log.info("开始下载文章图片，图片ID: {}", pictureId);
+		
+		if (pictureId == null) {
+			log.error("图片ID不能为空");
+			throw new IOException("图片ID不能为空");
+		}
+		
 		Optional<ArticlePicture> pictureOptional = articlePictureRepository.findById(pictureId);
 		if (!pictureOptional.isPresent()) {
 			log.error("文章图片不存在，图片ID: {}", pictureId);
-			throw new RuntimeException("Article picture not found");
+			throw new IOException("文章图片不存在，图片ID: " + pictureId);
 		}
 
-		String filePath = pictureOptional.get().getFilePath();
-		return fileOperationHelper.readFileContent(filePath);
+		ArticlePicture picture = pictureOptional.get();
+		String filePath = picture.getFilePath();
+		
+		log.info("找到图片记录，文件路径: {}", filePath);
+		
+		if (filePath == null || filePath.isEmpty()) {
+			log.error("图片文件路径为空，图片ID: {}", pictureId);
+			throw new IOException("图片文件路径为空");
+		}
+
+		File file = new File(filePath);
+		if (!file.exists()) {
+			log.error("图片文件不存在，文件路径: {}", filePath);
+			throw new IOException("图片文件不存在: " + filePath);
+		}
+		
+		try {
+			byte[] content = fileOperationHelper.readFileContent(filePath);
+			log.info("成功读取图片文件内容，大小: {} 字节", content.length);
+			return content;
+		} catch (IOException e) {
+			log.error("读取图片文件内容失败，文件路径: {}", filePath, e);
+			throw e;
+		}
 	}
 
 	public byte[] getPicture(Long pictureId) throws IOException {

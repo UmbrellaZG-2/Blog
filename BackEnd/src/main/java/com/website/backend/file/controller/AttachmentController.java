@@ -59,23 +59,61 @@ public class AttachmentController {
 		// 获取客户端IP地址
 		String clientIp = getClientIpAddress(request);
 
+		logger.info("开始处理附件下载请求，附件ID: {}, 客户端IP: {}", attachmentId, clientIp);
+		
 		// 检查IP是否被阻止或超过下载限制
 		if (rateLimitService.isIpBlocked(clientIp) || rateLimitService.recordDownloadRequest(clientIp)) {
+			logger.warn("客户端IP被阻止或超过下载限制: {}", clientIp);
 			response.setStatus(HttpStatusConstants.FORBIDDEN);
 			try {
 				response.getWriter().write("下载频率过高，请24小时后再试");
 			}
 			catch (IOException ex) {
-				// 忽略
+				logger.error("写入响应失败", ex);
 			}
 			return;
 		}
+		
 		try {
+			// 检查附件ID是否有效
+			if (attachmentId == null) {
+				logger.error("附件ID不能为空");
+				response.setStatus(HttpStatusConstants.BAD_REQUEST);
+				response.getWriter().write("附件ID不能为空");
+				return;
+			}
+			
 			logger.info("开始下载附件，附件ID: {}", attachmentId);
-			Attachment attachment = attachmentRepository.findById(attachmentId)
-				.orElseThrow(() -> new IOException("Attachment not found"));
+			
+			// 查找附件记录
+			Attachment attachment = attachmentRepository.findById(attachmentId).orElse(null);
+			if (attachment == null) {
+				logger.error("附件不存在，附件ID: {}", attachmentId);
+				response.setStatus(HttpStatusConstants.NOT_FOUND);
+				response.getWriter().write("附件不存在");
+				return;
+			}
 			
 			logger.info("找到附件记录，文件名: {}, 文件路径: {}", attachment.getFileName(), attachment.getFilePath());
+			
+			// 检查文件路径是否为空
+			if (attachment.getFilePath() == null || attachment.getFilePath().isEmpty()) {
+				logger.error("附件文件路径为空，附件ID: {}", attachmentId);
+				response.setStatus(HttpStatusConstants.INTERNAL_SERVER_ERROR);
+				response.getWriter().write("附件文件路径为空");
+				return;
+			}
+			
+			// 检查文件是否存在
+			java.io.File file = new java.io.File(attachment.getFilePath());
+			if (!file.exists()) {
+				logger.error("附件文件不存在，文件路径: {}", attachment.getFilePath());
+				response.setStatus(HttpStatusConstants.NOT_FOUND);
+				response.getWriter().write("附件文件不存在");
+				return;
+			}
+			
+			// 下载文件内容
 			byte[] fileContent = attachmentService.downloadAttachment(attachmentId);
 
 			// 增加附件下载次数
@@ -88,28 +126,26 @@ public class AttachmentController {
 			String fileName = attachment.getFileName();
 			
 			// 对文件名进行URL编码以支持中文等特殊字符
-			String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.toString())
-					.replaceAll("\\+", "%20");
+			String encodedFileName = URLEncoder.encode(attachment.getFileName(), StandardCharsets.UTF_8);
 			
-			// 设置Content-Disposition头，支持中文文件名
-			String contentDisposition = "attachment; filename=\"" + fileName + "\"; filename*=UTF-8''" + encodedFileName;
-			
-			// 添加调试信息到响应头
-			response.setHeader("X-Debug-Attachment-Id", String.valueOf(attachmentId));
-			response.setHeader("X-Debug-Original-Filename", fileName);
-			
-			// 允许前端访问Content-Disposition头和调试头
-			response.setHeader("Access-Control-Expose-Headers", 
-			    "Content-Disposition, X-Debug-Attachment-Id, X-Debug-Original-Filename");
-			
-			// 设置响应头（注意顺序很重要）
+			// 设置响应头
 			response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+			String contentDisposition = "attachment; filename=\"" + encodedFileName + "\"";
 			response.setHeader(HttpHeaders.CONTENT_DISPOSITION, contentDisposition);
+			
+			// 添加调试信息头
+			response.setHeader("X-Debug-Attachment-Id", String.valueOf(attachmentId));
+			response.setHeader("X-Debug-Original-Filename", attachment.getFileName());
+			// 暴露这些头部给前端
+			response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, 
+				HttpHeaders.CONTENT_DISPOSITION + ", X-Debug-Attachment-Id, X-Debug-Original-Filename");
+			// 添加跨域支持
+			response.setHeader("Access-Control-Allow-Origin", "*");
 			response.setContentLength(fileContent.length);
 			
 			// 添加调试日志
-			logger.info("下载附件信息 - ID: {}, 原始文件名: {}, Content-Disposition: {}", 
-			           attachmentId, fileName, contentDisposition);
+			logger.info("下载附件信息 - ID: {}, 原始文件名: {}, Encoded文件名: {}, Content-Disposition: {}", 
+			           attachmentId, attachment.getFileName(), encodedFileName, contentDisposition);
 			
 			// 写入响应体
 			try (OutputStream os = response.getOutputStream()) {
@@ -119,13 +155,13 @@ public class AttachmentController {
 			logger.info("附件下载完成，附件ID: {}", attachmentId);
 		}
 		catch (IOException e) {
-			logger.error("附件不存在，附件ID: {}, 错误信息: {}", attachmentId, e.getMessage());
+			logger.error("附件不存在或读取失败，附件ID: {}, 错误信息: {}", attachmentId, e.getMessage(), e);
 			response.setStatus(HttpStatusConstants.NOT_FOUND);
 			try {
 				response.getWriter().write("附件不存在: " + e.getMessage());
 			}
 			catch (IOException ex) {
-				// 忽略
+				logger.error("写入响应失败", ex);
 			}
 		}
 		catch (Exception e) {
@@ -135,7 +171,7 @@ public class AttachmentController {
 				response.getWriter().write("下载附件失败: " + e.getMessage());
 			}
 			catch (IOException ex) {
-				// 忽略
+				logger.error("写入响应失败", ex);
 			}
 		}
 	}
